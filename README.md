@@ -1,10 +1,10 @@
 # **TP2**
-
-## **Análisis del Problema**
-
+## **Integrantes**
 - Dituro, Celeste
 - Lopez, Victoria
 - Szop, Santiago
+
+## **Análisis del Problema**
 
 ## **Hipótesis**
 
