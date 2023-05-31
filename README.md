@@ -2,7 +2,7 @@
 ## **Integrantes**
 - Dituro, Celeste
 - Lopez, Victoria
-- Szop, Santiago
+- Czop, Santiago
 
 ## **Análisis del Problema**
 ### Conexiones entre locales
