@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["errors",""],["input_controller",""],["orders",""]]};
+window.SIDEBAR_ITEMS = {"mod":[["coffee_machine",""],["errors",""],["input_controller",""],["orders",""]]};

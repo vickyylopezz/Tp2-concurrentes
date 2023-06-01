@@ -1,48 +1,16 @@
-use actix::clock::sleep as sleep_clock;
-use actix::prelude::*;
-use actix_rt::time::sleep;
+use actix::{clock::sleep as sleep_clock, Actor};
 use std::time::Duration;
-use tp2::{errors::Error, input_controller::InputController, orders::Order};
-
-#[derive(Message)]
-#[rtype(result = "()")]
-struct ProcessOrder {
-    order: Order,
-}
-
-#[derive(Clone)]
-struct CoffeeMachine {
-    id: u32,
-}
-
-impl Actor for CoffeeMachine {
-    type Context = Context<Self>;
-}
-
-impl Handler<ProcessOrder> for CoffeeMachine {
-    type Result = ();
-
-    fn handle(&mut self, msg: ProcessOrder, _ctx: &mut Self::Context) {
-        println!(
-            "[COFFEE MACHINE {}]: processing order {:?}",
-            self.id, msg.order.id
-        );
-        let coffee_machine = self.clone();
-        actix::spawn(async move {
-            sleep(Duration::from_secs(5)).await;
-            println!(
-                "[COFFEE MACHINE {}]: already process order {:?}",
-                coffee_machine.id, msg.order.id
-            );
-        });
-    }
-}
+use tp2::{
+    coffee_machine::{CoffeeMachine, ProcessOrder},
+    errors::Error,
+    input_controller::InputController,
+};
 
 #[actix_rt::main]
 async fn main() -> Result<(), Error> {
     let controller = InputController::new(std::env::args().nth(1))?;
     let orders = controller.get_orders()?;
-    println!("[INPUT CONTROLLER] ORDERS TO PROCESS: {:?}", orders);
+    println!("[INPUT CONTROLLER]: ORDERS TO PROCESS {:?}", orders);
 
     // Create coffee machines as actors
     let coffee_machine1 = CoffeeMachine { id: 1 }.start();
