@@ -1,12 +1,12 @@
 [
     {
-        "id": "0",
-        "customer_id": "123",
+        "id": 0,
+        "customer_id": 123,
         "payment_method": "points"
     },
     {
-        "id": "1",
-        "customer_id": "124",
+        "id": 1,
+        "customer_id": 124,
         "payment_method": "money"
     }
 ]
