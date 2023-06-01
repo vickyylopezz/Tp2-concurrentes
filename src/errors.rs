@@ -3,4 +3,6 @@ pub enum Error {
     NotFileInput,
     FileNotFound,
     WrongFileFormat,
+    NoMoreOrders,
+    CantWriteOrdersLock,
 }
