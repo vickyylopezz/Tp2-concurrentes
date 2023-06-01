@@ -1,1 +1,1 @@
-window.ALL_CRATES = ["tp2"];
+window.ALL_CRATES = ["itoa","proc_macro2","quote","ryu","serde","serde_derive","serde_json","syn","tp2","unicode_ident"];
