@@ -30,16 +30,7 @@ impl Handler<ProcessOrder> for CoffeeMachine {
         let coffee_machine = self.clone();
 
         loop {
-            let order = if let Ok(mut orders) = msg.orders.write() {
-                if !orders.is_empty() {
-                    orders.remove(0)
-                } else {
-                    return Err(Error::NoMoreOrders);
-                }
-            } else {
-                return Err(Error::CantWriteOrdersLock);
-            };
-
+            let order = coffee_machine.clone().get_order(msg.orders.clone())?;
             actix::spawn(async move {
                 sleep(Duration::from_secs(2)).await;
                 println!(
@@ -48,5 +39,23 @@ impl Handler<ProcessOrder> for CoffeeMachine {
                 );
             });
         }
+    }
+}
+
+impl CoffeeMachine {
+    /// Gets an order from the list of orders if there are orders to process,
+    /// returns an error if not.
+    fn get_order(self, orders: Arc<RwLock<Vec<Order>>>) -> Result<Order, Error> {
+        let order = if let Ok(mut orders) = orders.write() {
+            if !orders.is_empty() {
+                orders.remove(0)
+            } else {
+                return Err(Error::NoMoreOrders);
+            }
+        } else {
+            return Err(Error::CantWriteOrdersLock);
+        };
+
+        Ok(order)
     }
 }
