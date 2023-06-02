@@ -2,10 +2,10 @@ use actix::prelude::*;
 use actix_rt::time::sleep;
 use std::time::Duration;
 
-use crate::{errors::Error, orders::Order};
+use crate::orders::Order;
 
 #[derive(Message)]
-#[rtype(result = "Result<(), Error>")]
+#[rtype(result = "()")]
 pub struct ProcessOrder {
     pub order: Order,
 }
@@ -20,9 +20,9 @@ impl Actor for CoffeeMachine {
 }
 
 impl Handler<ProcessOrder> for CoffeeMachine {
-    type Result = Result<(), Error>;
+    type Result = ();
 
-    fn handle(&mut self, msg: ProcessOrder, _ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: ProcessOrder, _ctx: &mut Self::Context) {
         println!(
             "[COFFEE MACHINE {}]: PROCESSING ORDER {}",
             self.id, msg.order.id
@@ -36,7 +36,5 @@ impl Handler<ProcessOrder> for CoffeeMachine {
                 coffee_machine.id, msg.order.id
             );
         });
-
-        Ok(())
     }
 }
