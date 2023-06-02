@@ -1,8 +1,5 @@
 use actix::{clock::sleep as sleep_clock, Actor, Addr};
-use std::{
-    sync::{Arc, RwLock},
-    time::Duration,
-};
+use std::time::Duration;
 use tp2::{
     coffee_machine::{CoffeeMachine, ProcessOrder},
     constants::COFFEE_MACHINES,
@@ -10,10 +7,11 @@ use tp2::{
     input_controller::InputController,
 };
 
-/// Returns a list of CoffeeMaker.
-pub fn get_coffee_machines() -> Vec<Addr<CoffeeMachine>> {
+/// Creates a list of [`CoffeeMachines`].
+fn get_coffee_machines() -> Vec<Addr<CoffeeMachine>> {
     let mut coffee_makers = Vec::new();
     for i in 0..COFFEE_MACHINES {
+        println!("[COFFEE MACHINE {:?}]: STARTING", i);
         coffee_makers.push(CoffeeMachine { id: i }.start());
     }
 
@@ -23,18 +21,13 @@ pub fn get_coffee_machines() -> Vec<Addr<CoffeeMachine>> {
 #[actix_rt::main]
 async fn main() -> Result<(), Error> {
     let controller = InputController::new(std::env::args().nth(1))?;
-    let orders_list = controller.get_orders()?;
-    println!("[INPUT CONTROLLER]: ORDERS TO PROCESS {:?}", orders_list);
+    let orders = controller.get_orders()?;
 
-    // Create coffee machine as actor
     let coffee_machines = get_coffee_machines();
-
-    let orders = Arc::new(RwLock::new(orders_list));
-    for coffee_machine in coffee_machines.clone() {
+    for (idx, order) in orders.into_iter().enumerate() {
+        let coffee_machine = coffee_machines[idx % coffee_machines.len()].clone();
         // Send message to coffee machine to process orders
-        coffee_machine.do_send(ProcessOrder {
-            orders: orders.clone(),
-        });
+        coffee_machine.do_send(ProcessOrder { order });
     }
 
     // Wait for coffee machine to stop processing orders
