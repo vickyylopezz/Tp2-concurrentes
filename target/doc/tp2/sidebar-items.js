@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["main",""]]};
+window.SIDEBAR_ITEMS = {"mod":[["coffee_machine",""],["constants",""],["errors",""],["input_controller",""],["orders",""]]};
