@@ -1,13 +1,10 @@
-use std::{
-    env,
-    process,
-};
+use std::{env, process};
 
-use tp2::local_server::server::{Server};
+use tp2::local_server::server::Server;
 
 fn id_missing() -> i32 {
     println!("Number of shop must be specified");
-    return -1;
+    -1
 }
 
 fn main() {
@@ -18,6 +15,9 @@ fn main() {
     println!("Sucursal numero {} corriendo", args[1]);
     println!("Cantidad de sucursales: {}", args[2]);
     //Shop running
-    let server = Server::new(args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap());
+    let server = Server::new(
+        args[1].parse::<i32>().unwrap(),
+        args[2].parse::<i32>().unwrap(),
+    );
     server.handle_client();
 }

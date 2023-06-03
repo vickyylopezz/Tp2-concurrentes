@@ -1,7 +1,7 @@
 use actix::{Actor, Addr};
 use actix_rt::System;
 use std::{
-    net::{SocketAddr, UdpSocket, IpAddr, Ipv4Addr},
+    net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket},
     sync::Arc,
 };
 use tp2::{
@@ -37,7 +37,7 @@ pub fn id_to_dataaddr(id: usize) -> SocketAddr {
 fn main() -> Result<(), Error> {
     System::new().block_on(async {
         let controller = InputController::new(std::env::args().nth(1), std::env::args().nth(2))?;
-        let shop_id = controller.shop_id.clone();
+        let shop_id = controller.shop_id;
         let orders = controller.get_orders()?;
 
         let ip_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));

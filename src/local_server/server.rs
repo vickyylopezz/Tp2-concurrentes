@@ -1,11 +1,9 @@
 use std::{
     net::{SocketAddr, UdpSocket},
-    thread, time::Duration,
+    time::Duration,
 };
 
-use rand::{thread_rng, Rng};
-
-use crate::{local_server::leader_election::LeaderElection, constants::TIMEOUT};
+use crate::local_server::leader_election::LeaderElection;
 
 pub fn id_to_dataaddr(id: usize) -> SocketAddr {
     let port = (2234 + id) as u16;
@@ -21,7 +19,6 @@ pub struct Server {
 
 impl Server {
     pub fn new(shop_id: i32, shops_amount: i32) -> Server {
-        
         let addr = id_to_dataaddr(shop_id as usize);
         let socket = UdpSocket::bind(addr).expect("Error when binding server socket");
 
@@ -34,21 +31,25 @@ impl Server {
         //     Err(_) => return Err(Error::CantCloneSocket),
         // }
 
-        Server { addr, socket , shop_id, shops_amount}
+        Server {
+            addr,
+            socket,
+            shop_id,
+            shops_amount,
+        }
     }
 
     pub fn handle_client(self) {
-        let mut shop_leader = LeaderElection::new(self.shop_id as usize, self.shops_amount);
+        let shop_leader = LeaderElection::new(self.shop_id as usize, self.shops_amount);
 
         loop {
             let mut buf = [0u8; 1024];
 
             if shop_leader.am_i_leader() {
                 println!("[{}] soy Lider", self.shop_id);
-                self.socket.set_read_timeout(Some(Duration::new(3, 0)));
+                let _ = self.socket.set_read_timeout(Some(Duration::new(3, 0)));
                 match self.socket.recv_from(&mut buf) {
                     Ok((size, _from)) => {
-                        
                         //Handle coffee machine messagge
                         let message = String::from_utf8_lossy(&buf[..size]);
                         println!("Recibi {} de la cafetera", message);
@@ -58,7 +59,6 @@ impl Server {
             } else {
                 match self.socket.recv_from(&mut buf) {
                     Ok((size, _from)) => {
-                        
                         //Handle coffee machine messagge
                         let message = String::from_utf8_lossy(&buf[..size]);
                         println!("Recibi {} de la cafetera", message);
@@ -68,10 +68,6 @@ impl Server {
 
                 //Send to ledear the information from the coffee machine
             }
-
-
-
-            
         }
     }
 }

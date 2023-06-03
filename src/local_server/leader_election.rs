@@ -2,11 +2,10 @@ use std::{
     mem::size_of,
     net::{SocketAddr, UdpSocket},
     sync::{Arc, Condvar, Mutex},
-    thread,
-    vec,
+    thread, vec,
 };
 
-use crate::constants::{TIMEOUT};
+use crate::constants::TIMEOUT;
 use crate::errors;
 use errors::Error;
 
@@ -34,7 +33,6 @@ impl LeaderElection {
             stop: Arc::new((Mutex::new(false), Condvar::new())),
             shops_amount,
         };
-        println!("Entre Leader Election");
         let mut clone = ret.clone();
         thread::spawn(move || clone.responder());
 
@@ -76,10 +74,10 @@ impl LeaderElection {
         match self.safe_send_next(&self.ids_to_msg(b'E', &[self.id]), self.id) {
             Ok(_) => {
                 let (leader_id_lock, leader_id_cvar) = &*self.leader_id;
-                if let Ok(_) = leader_id_cvar
+                if leader_id_cvar
                     .wait_while(leader_id_lock.lock().unwrap(), |leader_id| {
                         leader_id.is_none()
-                    })
+                    }).is_ok()
                 {}
             }
             Err(_) => {
@@ -89,7 +87,6 @@ impl LeaderElection {
                 }
             }
         }
-        println!("Salí safe_send_next");
     }
 
     fn ids_to_msg(&self, header: u8, ids: &[usize]) -> Vec<u8> {
@@ -103,7 +100,6 @@ impl LeaderElection {
 
     fn safe_send_next(&self, msg: &[u8], id: usize) -> Result<(), Error> {
         let next_id = self.next(id);
-        println!("Next id: {}", next_id);
         if next_id == self.id {
             println!("[{}] enviando {} a {}", self.id, msg[0] as char, next_id);
             return Err(Error::Timeout);
@@ -111,7 +107,7 @@ impl LeaderElection {
         if let Ok(mut got_ack_lock) = self.got_ack.0.lock() {
             *got_ack_lock = None
         }
-        self.socket.send_to(msg, id_to_ctrladdr(next_id));
+        let _ = self.socket.send_to(msg, id_to_ctrladdr(next_id));
         let got_ack =
             self.got_ack
                 .1
@@ -119,7 +115,6 @@ impl LeaderElection {
                     got_it.is_none() || got_it.unwrap() != next_id
                 });
         if got_ack.unwrap().1.timed_out() {
-            println!("Entre timeout");
             match self.safe_send_next(msg, next_id) {
                 Ok(_) => (),
                 Err(_) => return Err(Error::Timeout),
@@ -130,7 +125,6 @@ impl LeaderElection {
     }
 
     fn responder(&mut self) {
-        println!("Entre responder");
         while !*self.stop.0.lock().unwrap() {
             let vec_capacity =
                 1 + size_of::<usize>() + (self.shops_amount as usize + 1) * size_of::<usize>();
@@ -139,10 +133,8 @@ impl LeaderElection {
             for _i in 0..vec_capacity {
                 buf.push(0);
             }
-            println!("Intento recibir");
-            let (size, from) = self.socket.recv_from(&mut buf).unwrap();
+            let (_size, from) = self.socket.recv_from(&mut buf).unwrap();
             let (msg_type, mut ids) = self.parse_message(&buf);
-            println!("Recibí");
             match msg_type {
                 b'A' => {
                     println!("[{}] recibí ACK de {}", self.id, from);
@@ -213,12 +205,12 @@ impl LeaderElection {
         (buf[0], ids)
     }
 
-    fn stop(&mut self) {
+    fn _stop(&mut self) {
         let (stop_lock, stop_cvar) = &*self.stop;
         if let Ok(mut stop_lock) = stop_lock.lock() {
             *stop_lock = true;
         }
-        if let Ok(_) = stop_cvar.wait_while(stop_lock.lock().unwrap(), |should_stop| *should_stop) {
+        if stop_cvar.wait_while(stop_lock.lock().unwrap(), |should_stop| *should_stop).is_ok() {
         }
     }
 
@@ -229,7 +221,7 @@ impl LeaderElection {
             leader_id: self.leader_id.clone(),
             got_ack: self.got_ack.clone(),
             stop: self.stop.clone(),
-            shops_amount: self.shops_amount.clone(),
+            shops_amount: self.shops_amount,
         }
     }
 }
