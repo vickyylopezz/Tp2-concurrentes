@@ -36,14 +36,23 @@ fn main() -> Result<(), Error> {
         let orders = controller.get_orders()?;
 
         // Start local server
-        let server = Server::new(orders.clone());
+        let server = Server::new(orders.clone())?;
         let socket = Arc::new(server.socket);
 
         // Start coffee machines
         let coffee_machines = get_coffee_machines(socket.clone(), server.addr);
         for (idx, order) in orders.into_iter().enumerate() {
-            let coffee_machine = coffee_machines[idx % coffee_machines.len()].clone();
-            coffee_machine.send(ProcessOrder { order }).await.unwrap()
+            let id = idx % coffee_machines.len();
+            let coffee_machine = coffee_machines[id].clone();
+            match coffee_machine
+                .send(ProcessOrder {
+                    order: order.clone(),
+                })
+                .await
+            {
+                Ok(_) => println!("[COFFEE MACHINE {}]: processing order {}", id, order.id),
+                Err(_) => return Err(Error::CantSendMessage),
+            }
         }
 
         System::current().stop();

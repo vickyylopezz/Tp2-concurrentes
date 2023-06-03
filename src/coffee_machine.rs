@@ -29,10 +29,6 @@ impl Handler<ProcessOrder> for CoffeeMachine {
     type Result = ();
 
     fn handle(&mut self, msg: ProcessOrder, _ctx: &mut Self::Context) {
-        println!(
-            "[COFFEE MACHINE {}]: processing order {}",
-            self.id, msg.order.id
-        );
         let coffee_machine = self.clone();
         let message = "Test".to_string();
         let message_bytes = message.as_bytes();

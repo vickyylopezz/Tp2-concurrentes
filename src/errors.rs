@@ -4,4 +4,6 @@ pub enum Error {
     FileNotFound,
     WrongFileFormat,
     NoMoreOrders,
+    CantSendMessage,
+    CantCloneSocket,
 }
