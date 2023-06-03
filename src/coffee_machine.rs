@@ -34,9 +34,9 @@ impl Handler<ProcessOrder> for CoffeeMachine {
             self.id, msg.order.id
         );
         let coffee_machine = self.clone();
-        let mensaje = "Orden de prueba".to_string();
-        let mensaje_bytes = mensaje.as_bytes();
-        let _ = self.socket.send_to(mensaje_bytes, self.server_addr);
+        let message = "Test".to_string();
+        let message_bytes = message.as_bytes();
+        let _ = self.socket.send_to(message_bytes, self.server_addr);
 
         actix::spawn(async move {
             sleep(Duration::from_secs(2)).await;
