@@ -25,6 +25,11 @@
 
 ## **Ejecución del Programa**
 
+Para ejecutar cada servidor local es necesario correr:
+```
+cargo run --bin local_server <id de la sucursal> <cantidad total de sucursales>
+```
+
 ## **Resolución del Problema**
 
 ## **Casos de Prueba**

@@ -9,7 +9,13 @@ edition = "2021"
 rand = "0.7"
 serde = { version = "1.0.160", features = ["derive"] }
 serde_json = "1.0.96"
+actix = "0.13.0"
+actix-rt = "2.0.0"
 
 [[bin]]
 name = "local_server"
 path = "src/local_server/main.rs"
+
+[[bin]]
+name = "coffee_machine"
+path = "src/main.rs"
