@@ -3,8 +3,7 @@ use std::{
     process,
 };
 
-use tp2::{server::Server,
-};
+use tp2::local_server::server::{Server};
 
 fn id_missing() -> i32 {
     println!("Number of shop must be specified");

@@ -5,7 +5,7 @@ use std::{
 
 use rand::{thread_rng, Rng};
 
-use crate::{leader_election::LeaderElection, constants::TIMEOUT};
+use crate::{local_server::leader_election::LeaderElection, constants::TIMEOUT};
 
 pub fn id_to_dataaddr(id: usize) -> SocketAddr {
     let port = (2234 + id) as u16;
