@@ -45,37 +45,28 @@ impl Server {
 
             if shop_leader.am_i_leader() {
                 println!("[{}] soy Lider", self.shop_id);
-                // if thread_rng().gen_range(0, 100) >= 90 {
-                //     println!("[{}] me tomo vacaciones", id);
-                //     break;
-                // }
                 self.socket.set_read_timeout(Some(Duration::new(3, 0)));
                 match self.socket.recv_from(&mut buf) {
-                    Ok((_, from)) => {
-                        self.socket.send_to("PONG".as_bytes(), from).unwrap();
-                        println!("Mande PONG a: {}", from);
+                    Ok((size, _from)) => {
+                        
+                        //Handle coffee machine messagge
+                        let message = String::from_utf8_lossy(&buf[..size]);
+                        println!("Recibi {} de la cafetera", message);
                     }
                     Err(_) => continue,
                 }
             } else {
-                let leader_id = shop_leader.get_leader_id();
-                println!("[{}] pido trabajo al Lider {}", self.shop_id, leader_id);
-                self.socket
-                    .send_to("PING".as_bytes(), id_to_dataaddr(leader_id))
-                    .unwrap();
-                self.socket.set_read_timeout(Some(TIMEOUT)).unwrap();
-                if let Ok((size, from)) = self.socket.recv_from(&mut buf) {
-                    println!("[{}] trabajando", self.shop_id);
-                    thread::sleep(Duration::from_millis(thread_rng().gen_range(1000, 3000)));
-                } else {
-                    // por simplicidad consideramos que cualquier error necesita un lider nuevo
-                    shop_leader.find_new()
+                match self.socket.recv_from(&mut buf) {
+                    Ok((size, _from)) => {
+                        
+                        //Handle coffee machine messagge
+                        let message = String::from_utf8_lossy(&buf[..size]);
+                        println!("Recibi {} de la cafetera", message);
+                    }
+                    Err(_) => continue,
                 }
-                // let (size, _) = self.socket
-                //     .recv_from(&mut buf)
-                //     .expect("Error when receiving data");
-                // let message = String::from_utf8_lossy(&buf[..size]);
-                // println!("[SERVER]: Receive {}", message);
+
+                //Send to ledear the information from the coffee machine
             }
 
 
@@ -84,17 +75,3 @@ impl Server {
         }
     }
 }
-
-// fn shop_member(id: usize, shops_amount: i32) {
-//     println!("[{}] inicio", id);
-//     //Leader election
-//     let mut buf = [0; 4];
-//     //Local server logic goes here
-//     loop {
-        
-//     }
-
-//     //shop_leader.stop();
-
-//     //thread::sleep(Duration::from_secs(2));
-// }
