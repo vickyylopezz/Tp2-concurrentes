@@ -1,18 +1,14 @@
 use std::{
-    env,
     mem::size_of,
     net::{SocketAddr, UdpSocket},
-    process,
     sync::{Arc, Condvar, Mutex},
     thread,
-    time::Duration,
     vec,
 };
 
-use crate::constants::{self, TIMEOUT};
-use crate::error;
-use error::LeaderError;
-use rand::{thread_rng, Rng};
+use crate::constants::{TIMEOUT};
+use crate::errors;
+use errors::Error;
 
 pub fn id_to_ctrladdr(id: usize) -> SocketAddr {
     let port = (1234 + id) as u16;
@@ -105,12 +101,12 @@ impl LeaderElection {
         msg
     }
 
-    fn safe_send_next(&self, msg: &[u8], id: usize) -> Result<(), LeaderError> {
+    fn safe_send_next(&self, msg: &[u8], id: usize) -> Result<(), Error> {
         let next_id = self.next(id);
         println!("Next id: {}", next_id);
         if next_id == self.id {
             println!("[{}] enviando {} a {}", self.id, msg[0] as char, next_id);
-            return Err(LeaderError::Timeout);
+            return Err(Error::Timeout);
         }
         if let Ok(mut got_ack_lock) = self.got_ack.0.lock() {
             *got_ack_lock = None
@@ -126,7 +122,7 @@ impl LeaderElection {
             println!("Entre timeout");
             match self.safe_send_next(msg, next_id) {
                 Ok(_) => (),
-                Err(_) => return Err(LeaderError::Timeout),
+                Err(_) => return Err(Error::Timeout),
             }
         }
 

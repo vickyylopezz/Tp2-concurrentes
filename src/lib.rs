@@ -1,3 +1,5 @@
 pub mod constants;
-pub mod error;
+pub mod errors;
 pub mod leader_election;
+pub mod server;
+pub mod orders;
