@@ -40,9 +40,6 @@ fn main() -> Result<(), Error> {
         let shop_id = controller.shop_id.clone();
         let orders = controller.get_orders()?;
 
-        // Start local server
-        //let server = Server::new(orders.clone())?;
-        //let socket = Arc::new(server.socket);
         let ip_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
         let port = 8000;
         let addr = SocketAddr::new(ip_addr, port);

@@ -14,7 +14,7 @@ impl InputController {
     /// # Errors
     ///
     /// This function will return an error if the user does not enter a filename.
-    pub fn new(mut file_input: Option<String>, shop_id_input: Option<String>) -> Result<InputController, Error> {
+    pub fn new(file_input: Option<String>, shop_id_input: Option<String>) -> Result<InputController, Error> {
         let file = match file_input {
             Some(file) => file,
             None => return Err(Error::NotFileInput),
@@ -57,17 +57,21 @@ impl InputController {
 
 #[cfg(test)]
 mod tests {
-    use std::env::Args;
 
     use crate::{errors::Error, input_controller::InputController};
 
     #[test]
-    fn test01_get_a_valid_filename() {
+    fn test01_get_a_valid_filename_and_shop_id() {
         let controller =
             InputController::new(Some("orders.json".to_string()), Some("0".to_string())).expect("The filename is invalid");
         let expected_file = "orders.json".to_string();
         let got_file = controller.filename;
         assert_eq!(expected_file, got_file);
+
+        let expected_shop_id = 0;
+        let got_shop_id = controller.shop_id;
+        assert_eq!(expected_shop_id, got_shop_id);
+
     }
 
     #[test]
@@ -80,7 +84,16 @@ mod tests {
     }
 
     #[test]
-    fn test03_get_a_not_found_filename() {
+    fn test03_not_get_a_shop_id() {
+        let result =
+            InputController::new(Some("orders.json".to_string()), None).expect_err("You must enter a filename of the orders file");
+        let err_expected = Error::NotShopIdInput;
+
+        assert_eq!(result, err_expected);
+    }
+
+    #[test]
+    fn test04_get_a_not_found_filename() {
         let controller = InputController::new(Some("pedidos.json".to_string()), Some("0".to_string()))
             .expect("The filename is invalid");
         let result = controller
@@ -92,7 +105,7 @@ mod tests {
     }
 
     #[test]
-    fn test04_get_an_order_without_all_fields() {
+    fn test05_get_an_order_without_all_fields() {
         let controller =
             InputController::new(Some("orders.json".to_string()), Some("0".to_string())).expect("The filename is invalid");
         let orders = "{\r\n    \"all\":[\r\n        {\r\n            \"water\": 10,\r\n            \"cocoa\": 2,\r\n            \"foam\": 2\r\n        }\r\n    ]\r\n}".to_string();
