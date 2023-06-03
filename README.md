@@ -30,6 +30,10 @@ Para ejecutar cada servidor local es necesario correr:
 cargo run --bin local_server <id de la sucursal> <cantidad total de sucursales>
 ```
 
+Para ejecutar las cafeteras es necesario correr:
+```
+cargo run --bin coffee_machine <archivo con ordenes> <id de la sucursal>
+```
 ## **Resolución del Problema**
 
 ## **Casos de Prueba**

@@ -7,5 +7,5 @@ pub enum Error {
     CantSendMessage,
     CantCloneSocket,
     Timeout,
-
+    NotShopIdInput
 }

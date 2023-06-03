@@ -36,7 +36,8 @@ pub fn id_to_dataaddr(id: usize) -> SocketAddr {
 
 fn main() -> Result<(), Error> {
     System::new().block_on(async {
-        let controller = InputController::new(std::env::args().nth(1))?;
+        let controller = InputController::new(std::env::args().nth(1), std::env::args().nth(2))?;
+        let shop_id = controller.shop_id.clone();
         let orders = controller.get_orders()?;
 
         // Start local server
@@ -47,7 +48,7 @@ fn main() -> Result<(), Error> {
         let addr = SocketAddr::new(ip_addr, port);
 
         let socket = Arc::new(UdpSocket::bind(addr).expect("Error when binding server socket"));
-        let server_addr = id_to_dataaddr(0);
+        let server_addr = id_to_dataaddr(shop_id as usize);
 
         // Start coffee machines
         let coffee_machines = get_coffee_machines(socket.clone(), server_addr);
