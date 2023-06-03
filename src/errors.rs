@@ -3,5 +3,5 @@ pub enum Error {
     NotFileInput,
     FileNotFound,
     WrongFileFormat,
-    NoMoreOrders
+    NoMoreOrders,
 }

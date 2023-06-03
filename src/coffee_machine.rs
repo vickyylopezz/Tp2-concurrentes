@@ -1,6 +1,10 @@
 use actix::prelude::*;
 use actix_rt::time::sleep;
-use std::{time::Duration, sync::Arc, net::{UdpSocket, SocketAddr}};
+use std::{
+    net::{SocketAddr, UdpSocket},
+    sync::Arc,
+    time::Duration,
+};
 
 use crate::orders::Order;
 
@@ -14,7 +18,7 @@ pub struct ProcessOrder {
 pub struct CoffeeMachine {
     pub id: u32,
     pub server_addr: SocketAddr,
-    pub socket: Arc<UdpSocket>
+    pub socket: Arc<UdpSocket>,
 }
 
 impl Actor for CoffeeMachine {
@@ -32,7 +36,7 @@ impl Handler<ProcessOrder> for CoffeeMachine {
         let coffee_machine = self.clone();
         let mensaje = "Orden de prueba".to_string();
         let mensaje_bytes = mensaje.as_bytes();
-        let _ = self.socket.send_to(&mensaje_bytes, self.server_addr.clone());
+        let _ = self.socket.send_to(mensaje_bytes, self.server_addr);
 
         actix::spawn(async move {
             sleep(Duration::from_secs(2)).await;
