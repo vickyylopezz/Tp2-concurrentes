@@ -6,7 +6,7 @@ use std::{
     time::Duration,
 };
 
-use crate::orders::Order;
+use crate::coffee_machine::orders::Order;
 
 #[derive(Message)]
 #[rtype(result = "()")]

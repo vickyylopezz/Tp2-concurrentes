@@ -5,10 +5,9 @@ use std::{
     sync::Arc,
 };
 use tp2::{
-    coffee_machine::{CoffeeMachine, ProcessOrder},
+    coffee_machine::{coffee_machine::{CoffeeMachine, ProcessOrder}, input_controller::InputController},
     constants::COFFEE_MACHINES,
     errors::Error,
-    input_controller::InputController,
 };
 
 /// Creates a list of [`CoffeeMachines`].

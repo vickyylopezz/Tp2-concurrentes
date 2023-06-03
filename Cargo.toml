@@ -18,4 +18,4 @@ path = "src/local_server/main.rs"
 
 [[bin]]
 name = "coffee_machine"
-path = "src/main.rs"
+path = "src/coffee_machine/main.rs"

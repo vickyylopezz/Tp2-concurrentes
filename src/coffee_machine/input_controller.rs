@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{errors::Error, orders::Order};
+use crate::{errors::Error, coffee_machine::orders::Order};
 
 #[derive(Clone, Debug)]
 pub struct InputController {
@@ -69,7 +69,7 @@ impl InputController {
 #[cfg(test)]
 mod tests {
 
-    use crate::{errors::Error, input_controller::InputController};
+    use crate::{errors::Error, coffee_machine::input_controller::InputController};
 
     #[test]
     fn test01_get_a_valid_filename_and_shop_id() {
