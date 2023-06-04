@@ -43,9 +43,3 @@ impl Handler<ProcessOrder> for CoffeeMachine {
         });
     }
 }
-
-#[derive(Message)]
-#[rtype(result = "()")]
-pub struct BlockCustomer {
-    pub customer_id: u32,
-}

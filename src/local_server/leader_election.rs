@@ -26,7 +26,7 @@ pub struct LeaderElection {
 
 impl LeaderElection {
     pub fn new(id: usize, shops_amount: i32) -> LeaderElection {
-        let mut ret = LeaderElection {
+        let mut leader = LeaderElection {
             id,
             socket: UdpSocket::bind(id_to_ctrladdr(id)).expect("Error when binding server socket"),
             leader_id: Arc::new((Mutex::new(Some(id)), Condvar::new())),
@@ -34,12 +34,12 @@ impl LeaderElection {
             stop: Arc::new((Mutex::new(false), Condvar::new())),
             shops_amount,
         };
-        let mut clone = ret.clone();
-        thread::spawn(move || clone.responder());
+        let mut clone = leader.clone();
+        thread::spawn(move || clone.run());
 
-        //Find the leader
-        ret.find_new();
-        ret
+        // Find new leader
+        leader.find_new();
+        leader
     }
 
     pub fn am_i_leader(&self) -> Result<bool, Error> {
@@ -70,24 +70,32 @@ impl LeaderElection {
         }
     }
 
+    // Get next shop id
     fn next(&self, id: usize) -> usize {
         (id + 1) % self.shops_amount as usize
     }
 
+    // Set leader id value
+    fn set_leader_id(&mut self, value: Option<usize>) {
+        if let Ok(mut leader_id_lock) = self.leader_id.0.lock() {
+            *leader_id_lock = value
+        }
+    }
+
+    // Find new leader
     pub fn find_new(&mut self) {
         if let Ok(stop_lock) = self.stop.0.lock() {
             if *stop_lock {
                 return;
             }
         }
-        println!("[{}] buscando lider", self.id);
-        if let Ok(mut leader_id_lock) = self.leader_id.0.lock() {
-            *leader_id_lock = None
-        }
+        println!("[SERVER OF SHOP {}]: finding new leader", self.id);
+        self.set_leader_id(None);
 
-        //Send Election to all the nodes
+        // Send ELECTION message to all shops
         match self.safe_send_next(&self.ids_to_msg(b'E', &[self.id]), self.id) {
             Ok(_) => {
+                // Wait until there is no leader
                 let (leader_id_lock, leader_id_cvar) = &*self.leader_id;
                 if let Ok(leader_id_lock) = leader_id_lock.lock() {
                     if leader_id_cvar
@@ -98,9 +106,7 @@ impl LeaderElection {
             }
             Err(_) => {
                 // If there is no feedback from any node, it becomes leader
-                if let Ok(mut leader_id_lock) = self.leader_id.0.lock() {
-                    *leader_id_lock = Some(self.id)
-                }
+                self.set_leader_id(Some(self.id));
             }
         }
     }
@@ -114,15 +120,28 @@ impl LeaderElection {
         msg
     }
 
+    // Set got ack value
+    fn set_got_ack(&mut self, value: Option<usize>) {
+        if let Ok(mut got_ack_lock) = self.got_ack.0.lock() {
+            *got_ack_lock = value
+        }
+    }
+
     fn safe_send_next(&self, msg: &[u8], id: usize) -> Result<(), Error> {
         let next_id = self.next(id);
         if next_id == self.id {
-            println!("[{}] enviando {} a {}", self.id, msg[0] as char, next_id);
+            println!(
+                "[SERVER OF SHOP {}]: send {} to {}",
+                self.id, msg[0] as char, next_id
+            );
             return Err(Error::Timeout);
         }
-        if let Ok(mut got_ack_lock) = self.got_ack.0.lock() {
-            *got_ack_lock = None
-        }
+        self.clone().set_got_ack(None);
+
+        println!(
+            "[SERVER OF SHOP {}]: send {} to SERVER OF SHOP {}",
+            self.id, msg[0] as char, next_id
+        );
         let _ = self.socket.send_to(msg, id_to_ctrladdr(next_id));
 
         if let Ok(got_ack_lock) = self.got_ack.0.lock() {
@@ -143,45 +162,86 @@ impl LeaderElection {
         Ok(())
     }
 
-    fn responder(&mut self) -> Result<(), Error> {
+    // Returns a buffer to receive messages
+    fn get_buffer(self) -> Vec<u8> {
+        let vec_capacity =
+            1 + size_of::<usize>() + (self.shops_amount as usize + 1) * size_of::<usize>();
+        let mut buf = Vec::with_capacity(vec_capacity);
+        for _i in 0..vec_capacity {
+            buf.push(0);
+        }
+
+        buf
+    }
+
+    fn parse_message(&self, buf: &[u8]) -> Result<(u8, Vec<usize>), Error> {
+        let mut ids = vec![];
+
+        if let Ok(value) = buf[1..1 + size_of::<usize>()].try_into() {
+            let count = usize::from_le_bytes(value);
+            let mut pos = 1 + size_of::<usize>();
+            for _id in 0..count {
+                if let Ok(value) = buf[pos..pos + size_of::<usize>()].try_into() {
+                    ids.push(usize::from_le_bytes(value));
+                    pos += size_of::<usize>();
+                }
+            }
+
+            Ok((buf[0], ids))
+        } else {
+            Err(Error::CantParseMessage)
+        }
+    }
+
+    fn receive_message(&mut self, buf: &mut [u8]) -> Result<SocketAddr, Error> {
+        let (_size, from) = if let Ok(resp) = self.socket.recv_from(buf) {
+            resp
+        } else {
+            return Err(Error::CantReceiveMessage);
+        };
+        Ok(from)
+    }
+
+    fn add_id_to_got_ack(&mut self, ids: &[usize]) {
+        if let Ok(mut got_ack_lock) = self.got_ack.0.lock() {
+            *got_ack_lock = Some(ids[0]);
+        }
+        self.got_ack.1.notify_all();
+    }
+
+    fn run(&mut self) -> Result<(), Error> {
         if let Ok(stop_lock) = self.stop.0.lock() {
             loop {
                 if *stop_lock {
                     break;
                 }
-                let vec_capacity =
-                    1 + size_of::<usize>() + (self.shops_amount as usize + 1) * size_of::<usize>();
-                let mut buf = Vec::with_capacity(vec_capacity);
-                for _i in 0..vec_capacity {
-                    buf.push(0);
-                }
-                let (_size, from) = if let Ok(resp) = self.socket.recv_from(&mut buf) {
-                    resp
-                } else {
-                    return Err(Error::CantReceiveMessage);
-                };
+
+                let mut buf = self.clone().get_buffer();
+                let from = self.clone().receive_message(&mut buf)?;
+
                 let (msg_type, mut ids) = self.parse_message(&buf)?;
                 match msg_type {
                     b'A' => {
-                        println!("[{}] recibí ACK de {}", self.id, from);
-                        if let Ok(mut got_ack_lock) = self.got_ack.0.lock() {
-                            *got_ack_lock = Some(ids[0]);
-                        }
-                        self.got_ack.1.notify_all();
+                        println!("[SERVER OF SHOP {}]: get ACK from {}", self.id, from);
+                        self.clone().add_id_to_got_ack(&ids);
                     }
                     b'E' => {
-                        println!("[{}] recibí Election de {}, ids {:?}", self.id, from, ids);
+                        println!(
+                            "[SERVER OF SHOP {}]: get ELECTION FROM {}, ids {:?}",
+                            self.id, from, ids
+                        );
                         self.socket
                             .send_to(&self.ids_to_msg(b'A', &[self.id]), from)
                             .expect("Error when sending message");
                         if ids.contains(&self.id) {
-                            // dio toda la vuelta, cambiar a COORDINATOR
+                            // Message has been sent to all nodes, send COORDINATOR message
                             if let Some(winner) = ids.iter().max() {
                                 self.socket
                                     .send_to(&self.ids_to_msg(b'C', &[*winner, self.id]), from)
                                     .expect("Error when sending message");
                             }
                         } else {
+                            // Message has not been sent to all nodes, send ELECTION message to next shop
                             ids.push(self.id);
                             let msg = self.ids_to_msg(b'E', &ids);
                             let clone = self.clone();
@@ -190,7 +250,7 @@ impl LeaderElection {
                     }
                     b'C' => {
                         println!(
-                            "[{}] recibí nuevo coordinador de {}, ids {:?}",
+                            "[SERVER OF SHOP {}]: receive COORDINATOR from {}, ids {:?}",
                             self.id, from, ids
                         );
                         if let Ok(mut leader_id_lock) = self.leader_id.0.lock() {
@@ -220,25 +280,6 @@ impl LeaderElection {
         }
 
         Ok(())
-    }
-
-    fn parse_message(&self, buf: &[u8]) -> Result<(u8, Vec<usize>), Error> {
-        let mut ids = vec![];
-
-        if let Ok(value) = buf[1..1 + size_of::<usize>()].try_into() {
-            let count = usize::from_le_bytes(value);
-            let mut pos = 1 + size_of::<usize>();
-            for _id in 0..count {
-                if let Ok(value) = buf[pos..pos + size_of::<usize>()].try_into() {
-                    ids.push(usize::from_le_bytes(value));
-                    pos += size_of::<usize>();
-                }
-            }
-
-            Ok((buf[0], ids))
-        } else {
-            Err(Error::CantParseMessage)
-        }
     }
 
     fn _stop(&mut self) {

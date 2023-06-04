@@ -22,7 +22,7 @@ impl Server {
         let addr = id_to_dataaddr(shop_id as usize);
         let socket = UdpSocket::bind(addr).expect("Error when binding server socket");
         println!(
-            "[SERVER OF SHOP {}]: LISTENING ON PORT {}",
+            "[SERVER OF SHOP {}]: listening on port {}",
             shop_id,
             addr.port()
         );
@@ -42,28 +42,20 @@ impl Server {
             let mut buf = [0u8; 1024];
 
             if shop_leader.am_i_leader()? {
-                println!("[SERVER FROM SHOP {}]: IM LEADER", self.shop_id);
+                println!("[SERVER FROM SHOP {}]: im leader", self.shop_id);
                 let _ = self.socket.set_read_timeout(Some(Duration::new(3, 0)));
                 match self.socket.recv_from(&mut buf) {
                     Ok((size, _from)) => {
-                        // Handle coffee machine message
                         let message = String::from_utf8_lossy(&buf[..size]);
-                        println!(
-                            "[SERVER FROM SHOP {}]: RECEIVE {} FROM COFFEE MACHINE",
-                            self.shop_id, message
-                        );
+                        println!("[SERVER FROM SHOP {}]: receive {}", self.shop_id, message);
                     }
                     Err(_) => continue,
                 }
             } else {
                 match self.socket.recv_from(&mut buf) {
                     Ok((size, _from)) => {
-                        // Handle coffee machine message
                         let message = String::from_utf8_lossy(&buf[..size]);
-                        println!(
-                            "[SERVER FROM SHOP {}]: RECEIVE {} FROM COFFEE MACHINE",
-                            self.shop_id, message
-                        );
+                        println!("[SERVER FROM SHOP {}]: receive {}", self.shop_id, message);
                     }
                     Err(_) => continue,
                 }
