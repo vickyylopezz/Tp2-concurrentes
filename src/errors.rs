@@ -8,5 +8,10 @@ pub enum Error {
     CantCloneSocket,
     Timeout,
     NotShopIdInput,
-    InvalidShopId
+    InvalidShopId,
+    CantLockLeaderId,
+    CantGetLeaderId,
+    CantParseMessage,
+    CantGetShopId,
+    CantReceiveMessage,
 }

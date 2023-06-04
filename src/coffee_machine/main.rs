@@ -5,12 +5,15 @@ use std::{
     sync::Arc,
 };
 use tp2::{
-    coffee_machine::{coffee_machine::{CoffeeMachine, ProcessOrder}, input_controller::InputController},
+    coffee_machine::{
+        input_controller::InputController,
+        machine::{CoffeeMachine, ProcessOrder},
+    },
     constants::COFFEE_MACHINES,
     errors::Error,
 };
 
-/// Creates a list of [`CoffeeMachines`].
+/// Creates a list of [`CoffeeMachine`].
 fn get_coffee_machines(socket: Arc<UdpSocket>, addr: SocketAddr) -> Vec<Addr<CoffeeMachine>> {
     let mut coffee_makers = Vec::new();
     for i in 0..COFFEE_MACHINES {

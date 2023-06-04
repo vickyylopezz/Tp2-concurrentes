@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{errors::Error, coffee_machine::orders::Order};
+use crate::{coffee_machine::orders::Order, errors::Error};
 
 #[derive(Clone, Debug)]
 pub struct InputController {
@@ -24,18 +24,16 @@ impl InputController {
         };
 
         let shop_id = match shop_id_input {
-            Some(shop_id) => {
-                match shop_id.parse::<i32>() {
-                    Ok(shop_id) => shop_id,
-                    Err(_) => return Err(Error::InvalidShopId),
-                }
+            Some(shop_id) => match shop_id.parse::<i32>() {
+                Ok(shop_id) => shop_id,
+                Err(_) => return Err(Error::InvalidShopId),
             },
             None => return Err(Error::NotShopIdInput),
         };
 
         Ok(InputController {
             filename: file,
-            shop_id: shop_id,
+            shop_id,
         })
     }
 
@@ -69,7 +67,7 @@ impl InputController {
 #[cfg(test)]
 mod tests {
 
-    use crate::{errors::Error, coffee_machine::input_controller::InputController};
+    use crate::{coffee_machine::input_controller::InputController, errors::Error};
 
     #[test]
     fn test01_get_a_valid_filename_and_shop_id() {
@@ -133,8 +131,9 @@ mod tests {
     #[test]
     fn test06_get_an_invalid_shop_id() {
         let result =
-            InputController::new(Some("pedidos.json".to_string()), Some("aaaa".to_string())).expect_err("You must enter a valid shop id");
-        
+            InputController::new(Some("pedidos.json".to_string()), Some("aaaa".to_string()))
+                .expect_err("You must enter a valid shop id");
+
         let err_expected = Error::InvalidShopId;
 
         assert_eq!(result, err_expected);

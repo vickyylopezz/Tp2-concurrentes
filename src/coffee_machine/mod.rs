@@ -1,3 +1,3 @@
 pub mod input_controller;
-pub mod coffee_machine;
+pub mod machine;
 pub mod orders;
