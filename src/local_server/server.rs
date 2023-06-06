@@ -3,7 +3,9 @@ use std::{
     time::Duration,
 };
 
-use crate::{errors::Error, local_server::leader_election::LeaderElection};
+use crate::{
+    errors::Error, local_server::leader_election::LeaderElection, message_parser::MessageParser,
+};
 
 pub fn id_to_dataaddr(id: usize) -> SocketAddr {
     let port = (2234 + id) as u16;
@@ -56,6 +58,8 @@ impl Server {
                     Ok((size, _from)) => {
                         let message = String::from_utf8_lossy(&buf[..size]);
                         println!("[SERVER FROM SHOP {}]: receive {}", self.shop_id, message);
+                        let action = MessageParser::parse(message);
+                        // Handle action
                     }
                     Err(_) => continue,
                 }
