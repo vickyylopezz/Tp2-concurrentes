@@ -14,4 +14,5 @@ pub enum Error {
     CantParseMessage,
     CantGetShopId,
     CantReceiveMessage,
+    NotEnoughPoints,
 }
