@@ -227,15 +227,20 @@ impl LeaderElection {
                     }
                     b'E' => {
                         println!(
-                            "[SERVER OF SHOP {}]: get ELECTION FROM {}, ids {:?}",
+                            "[SERVER OF SHOP {}]: get ELECTION from {}, ids {:?}",
                             self.id, from, ids
                         );
+                        println!("[SERVER OF SHOP {}]: send ACK to {}", self.id, from);
                         self.socket
                             .send_to(&self.ids_to_msg(b'A', &[self.id]), from)
                             .expect("Error when sending message");
                         if ids.contains(&self.id) {
                             // Message has been sent to all nodes, send COORDINATOR message
                             if let Some(winner) = ids.iter().max() {
+                                println!(
+                                    "[SERVER OF SHOP {}]: send COORDINATOR to {}",
+                                    self.id, from
+                                );
                                 self.socket
                                     .send_to(&self.ids_to_msg(b'C', &[*winner, self.id]), from)
                                     .expect("Error when sending message");
@@ -250,13 +255,13 @@ impl LeaderElection {
                     }
                     b'C' => {
                         println!(
-                            "[SERVER OF SHOP {}]: receive COORDINATOR from {}, ids {:?}",
+                            "[SERVER OF SHOP {}]: get COORDINATOR from {}, ids: {:?}",
                             self.id, from, ids
                         );
-                        if let Ok(mut leader_id_lock) = self.leader_id.0.lock() {
-                            *leader_id_lock = Some(ids[0]);
-                        }
+                        let winner_id = Some(ids[0]);
+                        self.clone().set_leader_id(winner_id);
                         self.leader_id.1.notify_all();
+                        println!("[SERVER OF SHOP {}]: send ACK to {}", self.id, from);
                         self.socket
                             .send_to(&self.ids_to_msg(b'A', &[self.id]), from)
                             .expect("Error when sending message");
