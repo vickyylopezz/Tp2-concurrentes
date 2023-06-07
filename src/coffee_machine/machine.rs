@@ -6,7 +6,7 @@ use std::{
     time::Duration,
 };
 
-use crate::coffee_machine::orders::Order;
+use crate::{coffee_machine::orders::Order, message_sender::MessageSender};
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -32,10 +32,19 @@ impl Handler<ProcessOrder> for CoffeeMachine {
         let coffee_machine = self.clone();
         let message1 = format!("block {}", msg.order.customer_id).to_string();
         let message_bytes = message1.as_bytes();
-        let _ = self.socket.send_to(message_bytes, self.server_addr);
+        MessageSender::send(
+            self.socket.clone(),
+            self.server_addr,
+            message_bytes,
+            None,
+            None,
+        )
+        .expect("Failed to send message to local server");
+        // let _ = self.socket.send_to(message_bytes, self.server_addr);
 
         // Se procesa el pedido
         sleep(Duration::from_secs(2));
+
         println!(
             "[COFFEE MACHINE {}]: order {:?} already processed",
             coffee_machine.id, msg.order.id
@@ -48,6 +57,13 @@ impl Handler<ProcessOrder> for CoffeeMachine {
         )
         .to_string();
 
-        let _ = self.socket.send_to(message2.as_bytes(), self.server_addr);
+        MessageSender::send(
+            self.socket.clone(),
+            self.server_addr,
+            message2.as_bytes(),
+            None,
+            None,
+        )
+        .expect("Failed to send ending message to local server");
     }
 }

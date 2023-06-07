@@ -6,7 +6,7 @@ use std::{
 
 use crate::errors::Error;
 
-struct MessageSender {}
+pub struct MessageSender {}
 
 impl MessageSender {
     pub fn send(
