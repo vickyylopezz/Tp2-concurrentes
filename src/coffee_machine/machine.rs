@@ -1,8 +1,8 @@
 use actix::prelude::*;
-use actix_rt::time::sleep;
 use std::{
     net::{SocketAddr, UdpSocket},
     sync::Arc,
+    thread::sleep,
     time::Duration,
 };
 
@@ -30,16 +30,24 @@ impl Handler<ProcessOrder> for CoffeeMachine {
 
     fn handle(&mut self, msg: ProcessOrder, _ctx: &mut Self::Context) {
         let coffee_machine = self.clone();
-        let message = "Test".to_string();
-        let message_bytes = message.as_bytes();
+        let message1 = format!("block {}", msg.order.customer_id).to_string();
+        let message_bytes = message1.as_bytes();
         let _ = self.socket.send_to(message_bytes, self.server_addr);
 
-        actix::spawn(async move {
-            sleep(Duration::from_secs(2)).await;
-            println!(
-                "[COFFEE MACHINE {}]: order {:?} already processed",
-                coffee_machine.id, msg.order.id
-            );
-        });
+        // Se procesa el pedido
+        sleep(Duration::from_secs(2));
+        println!(
+            "[COFFEE MACHINE {}]: order {:?} already processed",
+            coffee_machine.id, msg.order.id
+        );
+
+        // let message2 = format!("fail {}", msg.order.customer_id);
+        let message2 = format!(
+            "complete {} {} {}",
+            msg.order.customer_id, msg.order.price, msg.order.payment_method
+        )
+        .to_string();
+
+        let _ = self.socket.send_to(message2.as_bytes(), self.server_addr);
     }
 }

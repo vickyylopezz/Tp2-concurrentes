@@ -58,7 +58,7 @@ impl Server {
                     Ok((size, _from)) => {
                         let message = String::from_utf8_lossy(&buf[..size]);
                         println!("[SERVER FROM SHOP {}]: receive {}", self.shop_id, message);
-                        let action = MessageParser::parse(message);
+                        let action = MessageParser::parse(message.into_owned());
                         // Handle action
                     }
                     Err(_) => continue,
