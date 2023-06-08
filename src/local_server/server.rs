@@ -3,7 +3,10 @@ use std::{
     time::Duration,
 };
 
-use crate::{errors::Error, local_server::leader_election::LeaderElection};
+use crate::{
+    action::Action, errors::Error, local_server::leader_election::LeaderElection,
+    message_parser::MessageParser,
+};
 
 pub fn id_to_dataaddr(id: usize) -> SocketAddr {
     let port = (2234 + id) as u16;
@@ -45,17 +48,51 @@ impl Server {
                 println!("[SERVER FROM SHOP {}]: im leader", self.shop_id);
                 let _ = self.socket.set_read_timeout(Some(Duration::new(3, 0)));
                 match self.socket.recv_from(&mut buf) {
-                    Ok((size, _from)) => {
+                    Ok((size, from)) => {
                         let message = String::from_utf8_lossy(&buf[..size]);
-                        println!("[SERVER FROM SHOP {}]: receive {}", self.shop_id, message);
+                        println!("[SERVER FROM SHOP {}]: get {}", self.shop_id, message);
+                        if let Ok(msg) = MessageParser::parse(message.into_owned()) {
+                            println!("[SERVER FROM SHOP {}]: send ACK to {}", self.shop_id, from);
+                            self.socket.send_to("ACK".as_bytes(), from).unwrap();
+                            match msg {
+                                Action::Block(_) => {
+                                    println!("[SERVER FROM SHOP {}]: to do BLOCK", self.shop_id)
+                                }
+                                Action::CompleteOrder(_, _, _) => println!(
+                                    "[SERVER FROM SHOP {}]: to do COMPLETE ORDER",
+                                    self.shop_id
+                                ),
+                                Action::FailOrder(_) => println!(
+                                    "[SERVER FROM SHOP {}]: to do FAIL ORDER",
+                                    self.shop_id
+                                ),
+                            }
+                        }
                     }
                     Err(_) => continue,
                 }
             } else {
                 match self.socket.recv_from(&mut buf) {
-                    Ok((size, _from)) => {
+                    Ok((size, from)) => {
                         let message = String::from_utf8_lossy(&buf[..size]);
-                        println!("[SERVER FROM SHOP {}]: receive {}", self.shop_id, message);
+                        println!("[SERVER FROM SHOP {}]: get {}", self.shop_id, message);
+                        if let Ok(msg) = MessageParser::parse(message.into_owned()) {
+                            println!("[SERVER FROM SHOP {}]: send ACK to {}", self.shop_id, from);
+                            self.socket.send_to("ACK".as_bytes(), from).unwrap();
+                            match msg {
+                                Action::Block(_) => {
+                                    println!("[SERVER FROM SHOP {}]: to do BLOCK", self.shop_id)
+                                }
+                                Action::CompleteOrder(_, _, _) => println!(
+                                    "[SERVER FROM SHOP {}]: to do COMPLETE ORDER",
+                                    self.shop_id
+                                ),
+                                Action::FailOrder(_) => println!(
+                                    "[SERVER FROM SHOP {}]: to do FAIL ORDER",
+                                    self.shop_id
+                                ),
+                            }
+                        }
                     }
                     Err(_) => continue,
                 }

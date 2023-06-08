@@ -60,7 +60,7 @@ fn main() -> Result<(), Error> {
                 })
                 .await
             {
-                Ok(_) => println!("[COFFEE MACHINE {}]: processing order {}", id, order.id),
+                Ok(_) => (),
                 Err(_) => return Err(Error::CantSendMessage),
             }
         }

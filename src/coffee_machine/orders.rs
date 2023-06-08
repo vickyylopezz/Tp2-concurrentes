@@ -4,5 +4,6 @@ use serde::Deserialize;
 pub struct Order {
     pub id: u32,
     pub customer_id: u32,
+    pub price: u32,
     pub payment_method: String,
 }
