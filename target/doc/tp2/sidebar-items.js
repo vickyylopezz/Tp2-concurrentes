@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["coffee_machine",""],["constants",""],["errors",""],["local_server",""]]};
+window.SIDEBAR_ITEMS = {"mod":[["coffee_machine",""],["constants",""],["errors",""],["local_server",""],["points_handler",""]]};
