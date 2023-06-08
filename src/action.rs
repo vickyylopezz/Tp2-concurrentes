@@ -1,4 +1,4 @@
-use crate::method::Method;
+use crate::payment_method::Method;
 
 pub enum Action {
     Block(u32),

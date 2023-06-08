@@ -6,10 +6,10 @@ use std::{
     time::Duration,
 };
 
-use crate::{coffee_machine::orders::Order, message_sender::MessageSender};
+use crate::{coffee_machine::orders::Order, errors::Error, message_sender::MessageSender};
 
 #[derive(Message)]
-#[rtype(result = "()")]
+#[rtype(result = "Result<(), Error>")]
 pub struct ProcessOrder {
     pub order: Order,
 }
@@ -26,44 +26,53 @@ impl Actor for CoffeeMachine {
 }
 
 impl Handler<ProcessOrder> for CoffeeMachine {
-    type Result = ();
+    type Result = Result<(), Error>;
 
-    fn handle(&mut self, msg: ProcessOrder, _ctx: &mut Self::Context) {
+    fn handle(&mut self, msg: ProcessOrder, _ctx: &mut Self::Context) -> Self::Result {
         let coffee_machine = self.clone();
-        let message1 = format!("block {}", msg.order.customer_id).to_string();
-        let message_bytes = message1.as_bytes();
-        MessageSender::send(
-            self.socket.clone(),
-            self.server_addr,
-            message_bytes,
-            None,
-            None,
-        )
-        .expect("Failed to send message to local server");
-        // let _ = self.socket.send_to(message_bytes, self.server_addr);
 
-        // Se procesa el pedido
+        // Send BLOCK message
+        let block_message = format!("block {}", msg.order.customer_id);
+        self.send_message(block_message, coffee_machine.id)?;
+
+        // Process order
         sleep(Duration::from_secs(2));
-
         println!(
             "[COFFEE MACHINE {}]: order {:?} already processed",
             coffee_machine.id, msg.order.id
         );
 
-        // let message2 = format!("fail {}", msg.order.customer_id);
-        let message2 = format!(
+        // Send COMPLETE message
+        let complete_message = format!(
             "complete {} {} {}",
             msg.order.customer_id, msg.order.price, msg.order.payment_method
-        )
-        .to_string();
+        );
+        self.send_message(complete_message, coffee_machine.id)?;
 
-        MessageSender::send(
+        Ok(())
+    }
+}
+
+impl CoffeeMachine {
+    fn send_message(&mut self, message: String, id: u32) -> Result<(), Error> {
+        match MessageSender::send(
             self.socket.clone(),
             self.server_addr,
-            message2.as_bytes(),
+            message,
             None,
             None,
-        )
-        .expect("Failed to send ending message to local server");
+            id,
+        ) {
+            Ok(_) => (),
+            Err(e) => {
+                println!(
+                    "[COFFEE MACHINE {}]: Failed to send message to local server, {:?}",
+                    id, e
+                );
+                return Err(Error::CantSendMessage);
+            }
+        }
+
+        Ok(())
     }
 }

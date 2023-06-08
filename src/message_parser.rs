@@ -1,4 +1,4 @@
-use crate::{action::*, errors::Error, method::Method};
+use crate::{action::*, errors::Error, payment_method::Method};
 
 const TYPE: usize = 0;
 const CLIENT_ID: usize = 1;
@@ -9,7 +9,7 @@ pub struct MessageParser {}
 
 impl MessageParser {
     pub fn parse(s: String) -> Result<Action, Error> {
-        let words: Vec<&str> = s.split(" ").collect();
+        let words: Vec<&str> = s.split(' ').collect();
         match words[TYPE] {
             "block" => MessageParser::parse_block(words),
             "complete" => MessageParser::parse_completion(words),

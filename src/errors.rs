@@ -15,4 +15,6 @@ pub enum Error {
     CantGetShopId,
     CantReceiveMessage,
     InvalidMessageFormat,
+    InvalidMessage,
+    CantSetReadTimeout,
 }
