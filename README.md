@@ -20,9 +20,9 @@ Hay 1 thread por cada servidor de un local, 1 actor por cada cafetera de un loca
 
 Las cafeteras se comunican con el servidor local por medio de sockets. Hay 3 posibles mensajes que las cafeteras les pueden enviar al servidor: 
 
-- **BLOCK** cliente_id: se envia para bloquear la cuenta del cliente asociado.
-- **COMPLETE** cliente_id puntos forma_de_pago: se envia si la cafetera pudo procesar correctamente el pedido y tiene como objetivos actualizar los puntos de la cuenta del cliente y desbloquearla.
-- **FAILURE** cliente_id: se envia si la cafetera no pudo procesar correctamente el pedido y el objetivo es desbloquear la cuenta del cliente asociado.
+- **BLOCK** *cliente_id*: se envia para bloquear la cuenta del cliente asociado.
+- **COMPLETE** *cliente_id* *puntos* *forma_de_pago*: se envia si la cafetera pudo procesar correctamente el pedido y tiene como objetivos actualizar los puntos de la cuenta del cliente y desbloquearla.
+- **FAILURE** *cliente_id*: se envia si la cafetera no pudo procesar correctamente el pedido y el objetivo es desbloquear la cuenta del cliente asociado.
   
 ### Caso: El cliente puede pagar con puntos o dinero
 
@@ -37,15 +37,18 @@ Cuando una cafetera toma un pedido, realiza el siguiente intercambio de mensajes
 - Si el servidor responde con un ACK, continua procesando pedidos.
 - Si el servidor no le responde con un ACK, el pedido se guarda en la lista de pedidos a sincronizar.
   
-1. Procesa pedido.
-2.1 Envía mensaje **COMPLETE** al servidor: para actualizar los puntos y desbloquear la cuenta del cliente si el pedido se pudo procesar correctamente.
-3.1 Recibe mensaje **ACK** del servidor: si lo recibe continua con el procesamiento de otro pedido. Caso contrario, va a intentar enviar el mensaje una cantidad determinada de veces:
+3. Procesa pedido.
+
+4.1 Envía mensaje **COMPLETE** al servidor: para actualizar los puntos y desbloquear la cuenta del cliente si el pedido se pudo procesar correctamente.
+
+5.1 Recibe mensaje **ACK** del servidor: si lo recibe continua con el procesamiento de otro pedido. Caso contrario, va a intentar enviar el mensaje una cantidad determinada de veces:
 
 - Si el servidor responde con un ACK, continua procesando pedidos.
 - Si el servidor no le responde con un ACK, el mensaje se guarda en la lista de mensajes a enviar al servidor cuando se vuelva a conectar en la red.
 
-2.2 Envía mensaje **FAILURE** al servidor: para desbloquear la cuenta del cliente si el pedido se pudo procesar correctamente.
-3.2 Recibe mensaje **ACK** del servidor: si lo recibe continua con el procesamiento de otro pedido. Caso contrario, va a intentar enviar el mensaje una cantidad determinada de veces:
+4.2 Envía mensaje **FAILURE** al servidor: para desbloquear la cuenta del cliente si el pedido se pudo procesar correctamente.
+
+5.2 Recibe mensaje **ACK** del servidor: si lo recibe continua con el procesamiento de otro pedido. Caso contrario, va a intentar enviar el mensaje una cantidad determinada de veces:
 
 - Si el servidor responde con un ACK, continua procesando pedidos.
 - Si el servidor no le responde con un ACK, el mensaje se guarda en la lista de mensajes a enviar al servidor cuando se vuelva a conectar en la red.
