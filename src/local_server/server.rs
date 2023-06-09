@@ -16,12 +16,12 @@ pub fn id_to_dataaddr(id: usize) -> SocketAddr {
 pub struct Server {
     pub addr: SocketAddr,
     pub socket: UdpSocket,
-    pub shop_id: i32,
-    pub shops_amount: i32,
+    pub shop_id: u32,
+    pub shops_amount: u32,
 }
 
 impl Server {
-    pub fn new(shop_id: i32, shops_amount: i32) -> Server {
+    pub fn new(shop_id: u32, shops_amount: u32) -> Server {
         let addr = id_to_dataaddr(shop_id as usize);
         let socket = UdpSocket::bind(addr).expect("Error when binding server socket");
         println!(

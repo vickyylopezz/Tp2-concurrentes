@@ -21,11 +21,11 @@ pub struct LeaderElection {
     leader_id: Arc<(Mutex<Option<usize>>, Condvar)>,
     got_ack: Arc<(Mutex<Option<usize>>, Condvar)>,
     stop: Arc<(Mutex<bool>, Condvar)>,
-    shops_amount: i32,
+    shops_amount: u32,
 }
 
 impl LeaderElection {
-    pub fn new(id: usize, shops_amount: i32) -> LeaderElection {
+    pub fn new(id: usize, shops_amount: u32) -> LeaderElection {
         let mut leader = LeaderElection {
             id,
             socket: UdpSocket::bind(id_to_ctrladdr(id)).expect("Error when binding server socket"),

@@ -7,8 +7,8 @@ fn id_missing() -> i32 {
     -1
 }
 
-fn parse_arg(args: Vec<String>, id: usize) -> Result<i32, Error> {
-    if let Ok(parsed_value) = args[id].parse::<i32>() {
+fn parse_arg(args: Vec<String>, id: usize) -> Result<u32, Error> {
+    if let Ok(parsed_value) = args[id].parse::<u32>() {
         Ok(parsed_value)
     } else {
         Err(Error::CantGetShopId)
