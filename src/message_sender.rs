@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use crate::errors::Error;
+use crate::{action::Action, errors::Error, message_parser::MessageParser};
 pub const ACK: &str = "ACK";
 
 pub struct MessageSender {}
@@ -22,19 +22,20 @@ impl MessageSender {
         let timeout = set_duration(timeout);
         set_read_timeout(&socket, timeout)?;
 
-        let mut buf: [u8; 10] = [0; 10];
+        let mut buf = [0u8; 1024];
         while attempts > 0 {
             attempts -= 1;
             send_message(&socket, message.clone(), addr, id)?;
             match socket.recv_from(&mut buf) {
-                Ok(_) => {
-                    let message = convert_to_string(buf, id)?;
-                    let message_parsed = message[0..3].to_string();
-                    if message_parsed != *ACK {
-                        println!("[COFFEE MACHINE {}]: get {}", id, message_parsed);
-                        return Err(Error::InvalidMessageFormat);
-                    } else {
-                        println!("[COFFEE MACHINE {}]: get ACK", id);
+                Ok((size, _from)) => {
+                    let message = String::from_utf8_lossy(&buf[..size]);
+                    println!("[COFFEE MACHINE {}]: get {}", id, message);
+                    if let Ok(received) = MessageParser::parse(message.into_owned()) {
+                        match received {
+                            Action::NotEnoughPoints(_) => return Err(Error::NotEnoughPoints),
+                            Action::Ack => (),
+                            _ => return Err(Error::InvalidMessageFormat),
+                        }
                     }
                 }
                 Err(_) => {
@@ -45,16 +46,6 @@ impl MessageSender {
         }
 
         Ok(())
-    }
-}
-
-fn convert_to_string(buf: [u8; 10], id: u32) -> Result<String, Error> {
-    match std::str::from_utf8(&buf) {
-        Ok(msg) => Ok(msg.to_string()),
-        Err(_) => {
-            println!("[COFFEE MACHINE {}]: get invalid message", id);
-            Err(Error::InvalidMessage)
-        }
     }
 }
 

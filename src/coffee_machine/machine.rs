@@ -47,7 +47,15 @@ impl Handler<ProcessOrder> for CoffeeMachine {
             "complete {} {} {}",
             msg.order.customer_id, msg.order.price, msg.order.payment_method
         );
-        self.send_message(complete_message, coffee_machine.id)?;
+        match self.send_message(complete_message, coffee_machine.id) {
+            Ok(_) => (),
+            Err(err) => match err {
+                Error::NotEnoughPoints => {
+                    self.handle_not_enough_points(msg.order, coffee_machine.id)?
+                }
+                _ => return Err(err),
+            },
+        }
 
         Ok(())
     }
@@ -64,14 +72,18 @@ impl CoffeeMachine {
             id,
         ) {
             Ok(_) => (),
-            Err(e) => {
-                println!(
-                    "[COFFEE MACHINE {}]: Failed to send message to local server, {:?}",
-                    id, e
-                );
-                return Err(Error::CantSendMessage);
-            }
+            Err(err) => return Err(err),
         }
+
+        Ok(())
+    }
+
+    // Block client account and change order's payment method to cash
+    fn handle_not_enough_points(&mut self, order: Order, id: u32) -> Result<(), Error> {
+        let block_message = format!("block {}", order.customer_id);
+        self.send_message(block_message, id)?;
+        let complete_message = format!("complete {} {} cash", order.customer_id, order.price);
+        self.send_message(complete_message, id)?;
 
         Ok(())
     }

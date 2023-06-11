@@ -14,6 +14,8 @@ impl MessageParser {
             "block" => MessageParser::parse_block(words),
             "complete" => MessageParser::parse_completion(words),
             "fail" => MessageParser::parse_failure(words),
+            "notEnough" => MessageParser::parser_not_enough(words),
+            "ACK" => MessageParser::parser_ack(words),
             _ => Err(Error::InvalidMessageFormat),
         }
     }
@@ -62,6 +64,25 @@ impl MessageParser {
             Err(_) => return Err(Error::InvalidMessageFormat),
         };
         Ok(Action::FailOrder(client_id))
+    }
+
+    fn parser_not_enough(words: Vec<&str>) -> Result<Action, Error> {
+        if words.len() != 2 {
+            return Err(Error::InvalidMessageFormat);
+        }
+        let s: &str = words[CLIENT_ID];
+        let client_id: u32 = match s.parse::<u32>() {
+            Ok(i) => i,
+            Err(_) => return Err(Error::InvalidMessageFormat),
+        };
+        Ok(Action::NotEnoughPoints(client_id))
+    }
+
+    fn parser_ack(words: Vec<&str>) -> Result<Action, Error> {
+        if words.len() != 1 {
+            return Err(Error::InvalidMessageFormat);
+        }
+        Ok(Action::Ack)
     }
 }
 
