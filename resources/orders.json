@@ -9,7 +9,7 @@
         "id": 1,
         "customer_id": 124,
         "price": 10,
-        "payment_method": "money"
+        "payment_method": "cash"
     },
     {
         "id": 2,
@@ -21,7 +21,7 @@
         "id": 3,
         "customer_id": 126,
         "price": 10,
-        "payment_method": "money"
+        "payment_method": "cash"
     }
 ]
 

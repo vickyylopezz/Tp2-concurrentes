@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     action::Action, errors::Error, local_server::leader_election::LeaderElection,
-    message_parser::MessageParser,
+    message_parser::MessageParser, payment_method::Method,
 };
 
 pub fn id_to_dataaddr(id: usize) -> SocketAddr {
@@ -52,20 +52,32 @@ impl Server {
                         let message = String::from_utf8_lossy(&buf[..size]);
                         println!("[SERVER FROM SHOP {}]: get {}", self.shop_id, message);
                         if let Ok(msg) = MessageParser::parse(message.into_owned()) {
-                            println!("[SERVER FROM SHOP {}]: send ACK to {}", self.shop_id, from);
-                            self.socket.send_to("ACK".as_bytes(), from).unwrap();
                             match msg {
                                 Action::Block(_) => {
-                                    println!("[SERVER FROM SHOP {}]: to do BLOCK", self.shop_id)
+                                    println!(
+                                        "[SERVER FROM SHOP {}]: send ACK to {}",
+                                        self.shop_id, from
+                                    );
+                                    self.socket.send_to("ACK".as_bytes(), from).unwrap();
                                 }
-                                Action::CompleteOrder(_, _, _) => println!(
-                                    "[SERVER FROM SHOP {}]: to do COMPLETE ORDER",
-                                    self.shop_id
-                                ),
-                                Action::FailOrder(_) => println!(
-                                    "[SERVER FROM SHOP {}]: to do FAIL ORDER",
-                                    self.shop_id
-                                ),
+                                Action::CompleteOrder(client_id, _, method) => match method {
+                                    Method::Cash => {
+                                        println!(
+                                            "[SERVER FROM SHOP {}]: send ACK to {}",
+                                            self.shop_id, from
+                                        );
+                                        self.socket.send_to("ACK".as_bytes(), from).unwrap();
+                                    }
+                                    Method::Points => {
+                                        let message = format!("notEnough {}", client_id);
+                                        println!(
+                                            "[SERVER FROM SHOP {}]: send NOT ENOUGH to {}",
+                                            self.shop_id, from
+                                        );
+                                        self.socket.send_to(message.as_bytes(), from).unwrap();
+                                    }
+                                },
+                                _ => return Err(Error::InvalidMessage),
                             }
                         }
                     }
@@ -91,6 +103,8 @@ impl Server {
                                     "[SERVER FROM SHOP {}]: to do FAIL ORDER",
                                     self.shop_id
                                 ),
+                                Action::NotEnoughPoints(_) => todo!(),
+                                Action::Ack => todo!(),
                             }
                         }
                     }
