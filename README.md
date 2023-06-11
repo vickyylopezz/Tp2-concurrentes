@@ -64,6 +64,8 @@ Cuando una cafetera toma un pedido en el que el cliente quiere pagar con puntos,
 
 ![tp2-concu-Sec  3 drawio](https://github.com/concurrentes-fiuba/2023-1c-tp2-concu-csv/assets/67125933/e11c6e1c-0c54-4d3b-befb-13c5c1b6282c)
 
+Siempre que una cafetera le envie un mensaje al servidor y no le llega el ACK del servidor local, la cafetera va a intentar enviar el mensaje una cantidad configurable de veces. Usamos conexiones UDP para disminuir la cantidad de conexiones a establecer entre las entidades del sistema pero implementamos el servicio de confirmación de mensajes para chequear que no haya pérdidas de mensajes.
+
 ## **Hipótesis**
 
 - Los servidores locales no se caen permanentemente.
