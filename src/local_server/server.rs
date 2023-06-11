@@ -60,12 +60,15 @@ impl Server {
                                 }
                                 Action::CompleteOrder(client_id, _, method) => match method {
                                     Method::Cash => {
-                                        self.handle_cash(from);
+                                        self.send_ack(from);
                                     }
                                     Method::Points => {
                                         self.handle_points(client_id, from);
                                     }
                                 },
+                                Action::FailOrder(_) => {
+                                    self.send_ack(from);
+                                }
                                 _ => return Err(Error::InvalidMessage),
                             }
                         }
@@ -105,7 +108,7 @@ impl Server {
         };
     }
 
-    fn handle_cash(&self, from: SocketAddr) {
+    fn send_ack(&self, from: SocketAddr) {
         println!("[SERVER FROM SHOP {}]: send ACK to {}", self.shop_id, from);
         self.socket.send_to("ACK".as_bytes(), from).unwrap();
     }

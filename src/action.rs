@@ -7,4 +7,5 @@ pub enum Action {
     Ack,
     NotEnoughPoints(u32),
     ClientAlreadyBlocked(u32),
+    FailOrder(u32),
 }

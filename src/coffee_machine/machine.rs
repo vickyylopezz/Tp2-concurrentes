@@ -1,4 +1,5 @@
 use actix::prelude::*;
+use rand::Rng;
 use std::{
     net::{SocketAddr, UdpSocket},
     sync::Arc,
@@ -9,6 +10,7 @@ use std::{
 use crate::{coffee_machine::orders::Order, errors::Error, message_sender::MessageSender};
 
 const POINTS: &str = "points";
+const COMPLETED: u32 = 1;
 
 #[derive(Message)]
 #[rtype(result = "Result<(), Error>")]
@@ -38,15 +40,14 @@ impl Handler<ProcessOrder> for CoffeeMachine {
             self.handle_block_message(order.clone(), coffee_machine.id)?;
         }
 
-        self.handle_process_order(order.clone(), coffee_machine.id);
-        self.handle_complete_message(order, coffee_machine.id)?;
+        self.handle_process_order(order, coffee_machine.id)?;
 
         Ok(())
     }
 }
 
 impl CoffeeMachine {
-    /// Handle sending of messages to server.
+    /// Handles messages to server.
     fn send_message(&mut self, message: String, id: u32) -> Result<(), Error> {
         match MessageSender::send(
             self.socket.clone(),
@@ -74,8 +75,7 @@ impl CoffeeMachine {
             self.handle_block_message(order.clone(), id)?;
         }
 
-        self.handle_process_order(order.clone(), id);
-        self.handle_complete_message(order, id)?;
+        self.handle_process_order(order, id)?;
 
         Ok(())
     }
@@ -87,6 +87,7 @@ impl CoffeeMachine {
             Ok(_) => (),
             Err(err) => match err {
                 Error::ClientAlreadyBlocked => {
+                    sleep(Duration::from_secs(10));
                     self.handle_client_already_blocked(order, id)?;
                 }
                 _ => return Err(Error::InvalidMessage),
@@ -96,13 +97,30 @@ impl CoffeeMachine {
         Ok(())
     }
 
+    /// Dummy function that returns true if the order has been completed.
+    /// Returns false if there was a failure.
+    fn is_completed(&self) -> bool {
+        let mut rng = rand::thread_rng();
+        let num: u32 = rng.gen_range(0..=1);
+
+        num == COMPLETED
+    }
+
     /// Handles process order.
-    fn handle_process_order(&mut self, order: Order, id: u32) {
-        sleep(Duration::from_secs(2));
+    fn handle_process_order(&mut self, order: Order, id: u32) -> Result<(), Error> {
+        sleep(Duration::from_secs(3));
         println!(
             "[COFFEE MACHINE {}]: order {:?} already processed",
             id, order.id
         );
+
+        if self.is_completed() {
+            self.handle_complete_message(order, id)?;
+        } else {
+            self.handle_fail_message(order, id)?;
+        };
+
+        Ok(())
     }
 
     /// Change order's payment method to cash.
@@ -126,6 +144,14 @@ impl CoffeeMachine {
                 _ => return Err(err),
             },
         }
+
+        Ok(())
+    }
+
+    /// Handles FAIL message.
+    fn handle_fail_message(&mut self, order: Order, id: u32) -> Result<(), Error> {
+        let fail_message = format!("fail {}", order.customer_id);
+        self.send_message(fail_message, id)?;
 
         Ok(())
     }

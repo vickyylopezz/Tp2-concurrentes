@@ -16,6 +16,7 @@ impl MessageParser {
             "ACK" => MessageParser::parser_ack(words),
             "notEnough" => MessageParser::parser_not_enough(words),
             "alreadyBlocked" => MessageParser::parser_already_blocked(words),
+            "fail" => MessageParser::parse_failure(words),
             _ => Err(Error::InvalidMessageFormat),
         }
     }
@@ -83,6 +84,19 @@ impl MessageParser {
         };
         Ok(Action::ClientAlreadyBlocked(client_id))
     }
+
+    fn parse_failure(words: Vec<&str>) -> Result<Action, Error> {
+        if words.len() != 2 {
+            return Err(Error::InvalidMessageFormat);
+        }
+
+        let s: &str = words[CLIENT_ID];
+        let client_id: u32 = match s.parse::<u32>() {
+            Ok(i) => i,
+            Err(_) => return Err(Error::InvalidMessageFormat),
+        };
+        Ok(Action::FailOrder(client_id))
+    }
 }
 
 #[cfg(test)]
@@ -132,6 +146,12 @@ mod message_parser_tests {
     #[should_panic]
     fn panic_on_invalid_method() {
         let s: String = "complete 123 10 credit".to_string();
+        MessageParser::parse(s).unwrap();
+    }
+
+    #[test]
+    fn can_parse_fail() {
+        let s: String = "fail 123".to_string();
         MessageParser::parse(s).unwrap();
     }
 }
