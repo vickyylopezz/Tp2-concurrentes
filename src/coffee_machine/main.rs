@@ -43,10 +43,11 @@ fn main() -> Result<(), Error> {
         let orders = controller.get_orders()?;
 
         let ip_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
-        let port = 8000;
+        let port = 8000 + shop_id as u16;
         let addr = SocketAddr::new(ip_addr, port);
 
-        let socket = Arc::new(UdpSocket::bind(addr).expect("Error when binding server socket"));
+        let socket =
+            Arc::new(UdpSocket::bind(addr).expect("Error when binding coffee machines socket"));
         let server_addr = id_to_dataaddr(shop_id as usize);
 
         // Start coffee machines
