@@ -13,7 +13,7 @@
     },
     {
         "id": 2,
-        "customer_id": 125,
+        "customer_id": 123,
         "price": 10,
         "payment_method": "points"
     },

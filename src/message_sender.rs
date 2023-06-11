@@ -33,6 +33,9 @@ impl MessageSender {
                     if let Ok(received) = MessageParser::parse(message.into_owned()) {
                         match received {
                             Action::NotEnoughPoints(_) => return Err(Error::NotEnoughPoints),
+                            Action::ClientAlreadyBlocked(_) => {
+                                return Err(Error::ClientAlreadyBlocked)
+                            }
                             Action::Ack => (),
                             _ => return Err(Error::InvalidMessageFormat),
                         }
