@@ -56,39 +56,14 @@ impl Server {
                         if let Ok(msg) = MessageParser::parse(message.into_owned()) {
                             match msg {
                                 Action::Block(client_id) => {
-                                    let mut rng = rand::thread_rng();
-                                    let num: u32 = rng.gen_range(1..=10);
-                                    println!("[SERVER FROM SHOP {}]: NUM {}", self.shop_id, num);
-                                    if num <= 5 {
-                                        println!(
-                                            "[SERVER FROM SHOP {}]: send ACK to {}",
-                                            self.shop_id, from
-                                        );
-                                        self.socket.send_to("ACK".as_bytes(), from).unwrap();
-                                    } else {
-                                        println!(
-                                            "[SERVER FROM SHOP {}]: send alreadyBlocked to {}",
-                                            self.shop_id, from
-                                        );
-                                        let message = format!("alreadyBlocked {}", client_id);
-                                        self.socket.send_to(message.as_bytes(), from).unwrap();
-                                    };
+                                    self.handle_block_message(from, client_id);
                                 }
                                 Action::CompleteOrder(client_id, _, method) => match method {
                                     Method::Cash => {
-                                        println!(
-                                            "[SERVER FROM SHOP {}]: send ACK to {}",
-                                            self.shop_id, from
-                                        );
-                                        self.socket.send_to("ACK".as_bytes(), from).unwrap();
+                                        self.handle_cash(from);
                                     }
                                     Method::Points => {
-                                        let message = format!("notEnough {}", client_id);
-                                        println!(
-                                            "[SERVER FROM SHOP {}]: send NOT ENOUGH to {}",
-                                            self.shop_id, from
-                                        );
-                                        self.socket.send_to(message.as_bytes(), from).unwrap();
+                                        self.handle_points(client_id, from);
                                     }
                                 },
                                 _ => return Err(Error::InvalidMessage),
@@ -111,5 +86,36 @@ impl Server {
                 }
             }
         }
+    }
+
+    fn handle_block_message(&self, from: SocketAddr, client_id: u32) {
+        let mut rng = rand::thread_rng();
+        let num: u32 = rng.gen_range(0..=1);
+        println!("[SERVER FROM SHOP {}]: NUM {}", self.shop_id, num);
+        if num == 1 {
+            println!("[SERVER FROM SHOP {}]: send ACK to {}", self.shop_id, from);
+            self.socket.send_to("ACK".as_bytes(), from).unwrap();
+        } else {
+            println!(
+                "[SERVER FROM SHOP {}]: send alreadyBlocked to {}",
+                self.shop_id, from
+            );
+            let message = format!("alreadyBlocked {}", client_id);
+            self.socket.send_to(message.as_bytes(), from).unwrap();
+        };
+    }
+
+    fn handle_cash(&self, from: SocketAddr) {
+        println!("[SERVER FROM SHOP {}]: send ACK to {}", self.shop_id, from);
+        self.socket.send_to("ACK".as_bytes(), from).unwrap();
+    }
+
+    fn handle_points(&self, client_id: u32, from: SocketAddr) {
+        let message = format!("notEnough {}", client_id);
+        println!(
+            "[SERVER FROM SHOP {}]: send NOT ENOUGH to {}",
+            self.shop_id, from
+        );
+        self.socket.send_to(message.as_bytes(), from).unwrap();
     }
 }
