@@ -18,4 +18,5 @@ pub enum Error {
     InvalidMessageFormat,
     InvalidMessage,
     CantSetReadTimeout,
+    ClientAlreadyBlocked,
 }

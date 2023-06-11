@@ -1,1 +1,1 @@
-window.ALL_CRATES = ["coffee_machine","local_server","tp2"];
+window.ALL_CRATES = ["coffee_machine","getrandom","local_server","rand","rand_chacha","rand_core","tp2"];

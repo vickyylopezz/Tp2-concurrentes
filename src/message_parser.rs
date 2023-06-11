@@ -13,9 +13,9 @@ impl MessageParser {
         match words[TYPE] {
             "block" => MessageParser::parse_block(words),
             "complete" => MessageParser::parse_completion(words),
-            "fail" => MessageParser::parse_failure(words),
-            "notEnough" => MessageParser::parser_not_enough(words),
             "ACK" => MessageParser::parser_ack(words),
+            "notEnough" => MessageParser::parser_not_enough(words),
+            "alreadyBlocked" => MessageParser::parser_already_blocked(words),
             _ => Err(Error::InvalidMessageFormat),
         }
     }
@@ -53,17 +53,11 @@ impl MessageParser {
         Ok(Action::CompleteOrder(client_id, price, method))
     }
 
-    fn parse_failure(words: Vec<&str>) -> Result<Action, Error> {
-        if words.len() != 2 {
+    fn parser_ack(words: Vec<&str>) -> Result<Action, Error> {
+        if words.len() != 1 {
             return Err(Error::InvalidMessageFormat);
         }
-
-        let s: &str = words[CLIENT_ID];
-        let client_id: u32 = match s.parse::<u32>() {
-            Ok(i) => i,
-            Err(_) => return Err(Error::InvalidMessageFormat),
-        };
-        Ok(Action::FailOrder(client_id))
+        Ok(Action::Ack)
     }
 
     fn parser_not_enough(words: Vec<&str>) -> Result<Action, Error> {
@@ -78,11 +72,16 @@ impl MessageParser {
         Ok(Action::NotEnoughPoints(client_id))
     }
 
-    fn parser_ack(words: Vec<&str>) -> Result<Action, Error> {
-        if words.len() != 1 {
+    fn parser_already_blocked(words: Vec<&str>) -> Result<Action, Error> {
+        if words.len() != 2 {
             return Err(Error::InvalidMessageFormat);
         }
-        Ok(Action::Ack)
+        let s: &str = words[CLIENT_ID];
+        let client_id: u32 = match s.parse::<u32>() {
+            Ok(i) => i,
+            Err(_) => return Err(Error::InvalidMessageFormat),
+        };
+        Ok(Action::ClientAlreadyBlocked(client_id))
     }
 }
 
@@ -133,12 +132,6 @@ mod message_parser_tests {
     #[should_panic]
     fn panic_on_invalid_method() {
         let s: String = "complete 123 10 credit".to_string();
-        MessageParser::parse(s).unwrap();
-    }
-
-    #[test]
-    fn can_parse_fail() {
-        let s: String = "fail 123".to_string();
         MessageParser::parse(s).unwrap();
     }
 }

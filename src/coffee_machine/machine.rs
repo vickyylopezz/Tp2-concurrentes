@@ -32,13 +32,14 @@ impl Handler<ProcessOrder> for CoffeeMachine {
 
     fn handle(&mut self, msg: ProcessOrder, _ctx: &mut Self::Context) -> Self::Result {
         let coffee_machine = self.clone();
+        let order = msg.order;
 
-        if self.pay_with_points(msg.order.clone()) {
-            self.handle_block_message(msg.order.clone(), coffee_machine.id)?;
+        if self.pay_with_points(order.clone()) {
+            self.handle_block_message(order.clone(), coffee_machine.id)?;
         }
 
-        self.handle_process_order(msg.order.clone(), coffee_machine.id);
-        self.handle_complete_message(msg.order, coffee_machine.id)?;
+        self.handle_process_order(order.clone(), coffee_machine.id);
+        self.handle_complete_message(order, coffee_machine.id)?;
 
         Ok(())
     }
@@ -67,10 +68,30 @@ impl CoffeeMachine {
         order.payment_method == *POINTS
     }
 
+    /// Handles ClientAlreadyBlocked message.
+    fn handle_client_already_blocked(&mut self, order: Order, id: u32) -> Result<(), Error> {
+        if self.pay_with_points(order.clone()) {
+            self.handle_block_message(order.clone(), id)?;
+        }
+
+        self.handle_process_order(order.clone(), id);
+        self.handle_complete_message(order, id)?;
+
+        Ok(())
+    }
+
     /// Handles BLOCK message.
     fn handle_block_message(&mut self, order: Order, id: u32) -> Result<(), Error> {
         let block_message = format!("block {}", order.customer_id);
-        self.send_message(block_message, id)?;
+        match self.send_message(block_message, id) {
+            Ok(_) => (),
+            Err(err) => match err {
+                Error::ClientAlreadyBlocked => {
+                    self.handle_client_already_blocked(order, id)?;
+                }
+                _ => return Err(Error::InvalidMessage),
+            },
+        }
 
         Ok(())
     }
