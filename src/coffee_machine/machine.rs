@@ -31,9 +31,11 @@ impl Handler<ProcessOrder> for CoffeeMachine {
     fn handle(&mut self, msg: ProcessOrder, _ctx: &mut Self::Context) -> Self::Result {
         let coffee_machine = self.clone();
 
-        // Send BLOCK message
-        let block_message = format!("block {}", msg.order.customer_id);
-        self.send_message(block_message, coffee_machine.id)?;
+        if msg.order.payment_method == "points" {
+            // Send BLOCK message
+            let block_message = format!("block {}", msg.order.customer_id);
+            self.send_message(block_message, coffee_machine.id)?;
+        }
 
         // Process order
         sleep(Duration::from_secs(2));
@@ -78,10 +80,8 @@ impl CoffeeMachine {
         Ok(())
     }
 
-    // Block client account and change order's payment method to cash
+    // Change order's payment method to cash
     fn handle_not_enough_points(&mut self, order: Order, id: u32) -> Result<(), Error> {
-        let block_message = format!("block {}", order.customer_id);
-        self.send_message(block_message, id)?;
         let complete_message = format!("complete {} {} cash", order.customer_id, order.price);
         self.send_message(complete_message, id)?;
 
