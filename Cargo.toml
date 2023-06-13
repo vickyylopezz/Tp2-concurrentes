@@ -19,3 +19,11 @@ path = "src/local_server/main.rs"
 [[bin]]
 name = "coffee_machine"
 path = "src/coffee_machine/main.rs"
+
+[[bin]]
+name = "down"
+path = "resources/down.rs"
+
+[[bin]]
+name = "up"
+path = "resources/up.rs"

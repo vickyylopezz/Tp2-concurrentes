@@ -9,6 +9,7 @@ var sourcesIndex = JSON.parse('{\
 "coffee_machine":["",[],["main.rs"]],\
 "crossbeam_channel":["",[["flavors",[],["array.rs","at.rs","list.rs","mod.rs","never.rs","tick.rs","zero.rs"]]],["channel.rs","context.rs","counter.rs","err.rs","lib.rs","select.rs","select_macro.rs","utils.rs","waker.rs"]],\
 "crossbeam_utils":["",[["atomic",[],["atomic_cell.rs","consume.rs","mod.rs","seq_lock.rs"]],["sync",[],["mod.rs","once_lock.rs","parker.rs","sharded_lock.rs","wait_group.rs"]]],["backoff.rs","cache_padded.rs","lib.rs","thread.rs"]],\
+"down":["",[],["down.rs"]],\
 "futures_core":["",[["task",[["__internal",[],["atomic_waker.rs","mod.rs"]]],["mod.rs","poll.rs"]]],["future.rs","lib.rs","stream.rs"]],\
 "futures_sink":["",[],["lib.rs"]],\
 "futures_task":["",[],["future_obj.rs","lib.rs","noop_waker.rs","spawn.rs"]],\
@@ -44,6 +45,7 @@ var sourcesIndex = JSON.parse('{\
 "tracing":["",[],["dispatcher.rs","field.rs","instrument.rs","level_filters.rs","lib.rs","macros.rs","span.rs","stdlib.rs","subscriber.rs"]],\
 "tracing_core":["",[],["callsite.rs","dispatcher.rs","event.rs","field.rs","lazy.rs","lib.rs","metadata.rs","parent.rs","span.rs","stdlib.rs","subscriber.rs"]],\
 "unicode_ident":["",[],["lib.rs","tables.rs"]],\
+"up":["",[],["up.rs"]],\
 "winapi":["",[["km",[],["mod.rs"]],["shared",[],["basetsd.rs","cfg.rs","devpropdef.rs","guiddef.rs","in6addr.rs","inaddr.rs","ktmtypes.rs","minwindef.rs","mod.rs","mstcpip.rs","ntdef.rs","ntstatus.rs","qos.rs","rpcndr.rs","windef.rs","winerror.rs","ws2def.rs","ws2ipdef.rs","wtypesbase.rs"]],["ucrt",[],["mod.rs"]],["um",[["gl",[],["mod.rs"]]],["cfgmgr32.rs","fileapi.rs","handleapi.rs","libloaderapi.rs","minwinbase.rs","mod.rs","processthreadsapi.rs","reason.rs","winbase.rs","winnt.rs","winreg.rs","winsock2.rs","ws2tcpip.rs"]],["vc",[],["excpt.rs","mod.rs","vadefs.rs","vcruntime.rs"]],["winrt",[],["mod.rs"]]],["lib.rs","macros.rs"]],\
 "windows_targets":["",[],["lib.rs"]],\
 "windows_x86_64_msvc":["",[],["lib.rs"]]\

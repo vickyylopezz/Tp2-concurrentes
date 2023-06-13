@@ -5,7 +5,7 @@ use crate::{coffee_machine::orders::Order, errors::Error};
 #[derive(Clone, Debug)]
 pub struct InputController {
     pub filename: String,
-    pub shop_id: i32,
+    pub shop_id: u32,
 }
 
 impl InputController {
@@ -24,7 +24,7 @@ impl InputController {
         };
 
         let shop_id = match shop_id_input {
-            Some(shop_id) => match shop_id.parse::<i32>() {
+            Some(shop_id) => match shop_id.parse::<u32>() {
                 Ok(shop_id) => shop_id,
                 Err(_) => return Err(Error::InvalidShopId),
             },

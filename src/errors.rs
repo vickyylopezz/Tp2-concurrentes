@@ -19,4 +19,8 @@ pub enum Error {
     InvalidMessage,
     CantSetReadTimeout,
     ClientAlreadyBlocked,
+    UserAlreadyBlocked,
+    UserAlreadyUnblocked,
+    Down,
+    Sync,
 }

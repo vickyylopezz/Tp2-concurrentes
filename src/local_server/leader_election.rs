@@ -34,7 +34,7 @@ impl LeaderElection {
             stop: Arc::new((Mutex::new(false), Condvar::new())),
             shops_amount,
         };
-        let mut clone = leader.clone();
+        let mut clone = leader.clone_leader_election();
         thread::spawn(move || clone.run());
 
         // Find new leader
@@ -71,7 +71,7 @@ impl LeaderElection {
     }
 
     // Get next shop id
-    fn next(&self, id: usize) -> usize {
+    pub fn next(&self, id: usize) -> usize {
         (id + 1) % self.shops_amount as usize
     }
 
@@ -130,18 +130,18 @@ impl LeaderElection {
     fn safe_send_next(&self, msg: &[u8], id: usize) -> Result<(), Error> {
         let next_id = self.next(id);
         if next_id == self.id {
-            println!(
-                "[SERVER OF SHOP {}]: send {} to {}",
-                self.id, msg[0] as char, next_id
-            );
+            // println!(
+            //     "[SERVER OF SHOP {}]: send {} to {}",
+            //     self.id, msg[0] as char, next_id
+            // );
             return Err(Error::Timeout);
         }
-        self.clone().set_got_ack(None);
+        self.clone_leader_election().set_got_ack(None);
 
-        println!(
-            "[SERVER OF SHOP {}]: send {} to SERVER OF SHOP {}",
-            self.id, msg[0] as char, next_id
-        );
+        // println!(
+        //     "[SERVER OF SHOP {}]: send {} to SERVER OF SHOP {}",
+        //     self.id, msg[0] as char, next_id
+        // );
         let _ = self.socket.send_to(msg, id_to_ctrladdr(next_id));
 
         if let Ok(got_ack_lock) = self.got_ack.0.lock() {
@@ -210,98 +210,89 @@ impl LeaderElection {
     }
 
     fn run(&mut self) -> Result<(), Error> {
-        if let Ok(stop_lock) = self.stop.0.lock() {
-            loop {
+        loop {
+            let mut buf = self.clone_leader_election().get_buffer();
+            let from = self.clone_leader_election().receive_message(&mut buf)?;
+            if let Ok(stop_lock) = self.stop.0.lock() {
                 if *stop_lock {
-                    break;
+                    continue;
                 }
-
-                let mut buf = self.clone().get_buffer();
-                let from = self.clone().receive_message(&mut buf)?;
-
-                let (msg_type, mut ids) = self.parse_message(&buf)?;
-                match msg_type {
-                    b'A' => {
-                        println!("[SERVER OF SHOP {}]: get ACK from {}", self.id, from);
-                        self.clone().add_id_to_got_ack(&ids);
-                    }
-                    b'E' => {
-                        println!(
-                            "[SERVER OF SHOP {}]: get ELECTION from {}, ids {:?}",
-                            self.id, from, ids
-                        );
-                        println!("[SERVER OF SHOP {}]: send ACK to {}", self.id, from);
-                        self.socket
-                            .send_to(&self.ids_to_msg(b'A', &[self.id]), from)
-                            .expect("Error when sending message");
-                        if ids.contains(&self.id) {
-                            // Message has been sent to all nodes, send COORDINATOR message
-                            if let Some(winner) = ids.iter().max() {
-                                println!(
-                                    "[SERVER OF SHOP {}]: send COORDINATOR to {}",
-                                    self.id, from
-                                );
-                                self.socket
-                                    .send_to(&self.ids_to_msg(b'C', &[*winner, self.id]), from)
-                                    .expect("Error when sending message");
-                            }
-                        } else {
-                            // Message has not been sent to all nodes, send ELECTION message to next shop
-                            ids.push(self.id);
-                            let msg = self.ids_to_msg(b'E', &ids);
-                            let clone = self.clone();
-                            thread::spawn(move || clone.safe_send_next(&msg, clone.id));
+            }
+            let (msg_type, mut ids) = self.parse_message(&buf)?;
+            match msg_type {
+                b'A' => {
+                    // println!("[SERVER OF SHOP {}]: get ACK from {}", self.id, from);
+                    self.clone_leader_election().add_id_to_got_ack(&ids);
+                }
+                b'E' => {
+                    // println!(
+                    //     "[SERVER OF SHOP {}]: get ELECTION from {}, ids {:?}",
+                    //     self.id, from, ids
+                    // );
+                    // println!("[SERVER OF SHOP {}]: send ACK to {}", self.id, from);
+                    self.socket
+                        .send_to(&self.ids_to_msg(b'A', &[self.id]), from)
+                        .expect("Error when sending message");
+                    if ids.contains(&self.id) {
+                        // Message has been sent to all nodes, send COORDINATOR message
+                        if let Some(winner) = ids.iter().max() {
+                            // println!(
+                            //     "[SERVER OF SHOP {}]: send COORDINATOR to {}",
+                            //     self.id, from
+                            // );
+                            self.socket
+                                .send_to(&self.ids_to_msg(b'C', &[*winner]), from)
+                                .expect("Error when sending message");
                         }
+                    } else {
+                        // Message has not been sent to all nodes, send ELECTION message to next shop
+                        ids.push(self.id);
+                        let msg = self.ids_to_msg(b'E', &ids);
+                        let clone = self.clone_leader_election();
+                        thread::spawn(move || clone.safe_send_next(&msg, clone.id));
                     }
-                    b'C' => {
-                        println!(
-                            "[SERVER OF SHOP {}]: get COORDINATOR from {}, ids: {:?}",
-                            self.id, from, ids
-                        );
-                        let winner_id = Some(ids[0]);
-                        self.clone().set_leader_id(winner_id);
-                        self.leader_id.1.notify_all();
-                        println!("[SERVER OF SHOP {}]: send ACK to {}", self.id, from);
-                        self.socket
-                            .send_to(&self.ids_to_msg(b'A', &[self.id]), from)
-                            .expect("Error when sending message");
-                        if !ids[1..].contains(&self.id) {
-                            ids.push(self.id);
-                            let msg = self.ids_to_msg(b'C', &ids);
-                            let clone = self.clone();
-                            thread::spawn(move || clone.safe_send_next(&msg, clone.id));
-                        }
+                }
+                b'C' => {
+                    // println!(
+                    //     "[SERVER OF SHOP {}]: get COORDINATOR from {}, ids: {:?}",
+                    //     self.id, from, ids
+                    // );
+                    let winner_id = Some(ids[0]);
+                    self.clone_leader_election().set_leader_id(winner_id);
+                    self.leader_id.1.notify_all();
+                    // println!("[SERVER OF SHOP {}]: send ACK to {}", self.id, from);
+                    self.socket
+                        .send_to(&self.ids_to_msg(b'A', &[self.id]), from)
+                        .expect("Error when sending message");
+                    if !ids[1..].contains(&self.id) {
+                        ids.push(self.id);
+                        let msg = self.ids_to_msg(b'C', &ids);
+                        let clone = self.clone_leader_election();
+                        thread::spawn(move || clone.safe_send_next(&msg, clone.id));
                     }
-                    _ => {
-                        println!("[{}] ??? {:?}", self.id, ids);
-                    }
+                }
+                _ => {
+                    println!("[{}] ??? {:?}", self.id, ids);
                 }
             }
         }
-
-        if let Ok(mut stop_lock) = self.stop.0.lock() {
-            *stop_lock = false;
-            self.stop.1.notify_all();
-        }
-
-        Ok(())
     }
 
-    fn _stop(&mut self) {
-        let (stop_lock, stop_cvar) = &*self.stop;
+    pub fn stop(&mut self) {
+        let (stop_lock, _) = &*self.stop;
         if let Ok(mut stop_lock) = stop_lock.lock() {
             *stop_lock = true;
         }
+    }
 
-        if let Ok(stop_lock) = stop_lock.lock() {
-            if stop_cvar
-                .wait_while(stop_lock, |should_stop| *should_stop)
-                .is_ok()
-            {}
+    pub fn up(&mut self) {
+        let (stop_lock, _) = &*self.stop;
+        if let Ok(mut stop_lock) = stop_lock.lock() {
+            *stop_lock = false;
         }
     }
 
-    fn clone(&self) -> LeaderElection {
+    pub fn clone_leader_election(&self) -> LeaderElection {
         LeaderElection {
             id: self.id,
             socket: self

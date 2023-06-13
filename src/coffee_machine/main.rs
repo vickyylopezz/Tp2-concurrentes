@@ -14,7 +14,11 @@ use tp2::{
 };
 
 /// Creates a list of [`CoffeeMachine`].
-fn get_coffee_machines(socket: Arc<UdpSocket>, addr: SocketAddr) -> Vec<Addr<CoffeeMachine>> {
+fn get_coffee_machines(
+    socket: Arc<UdpSocket>,
+    addr: SocketAddr,
+    shop_id: u32,
+) -> Vec<Addr<CoffeeMachine>> {
     let mut coffee_makers = Vec::new();
     for i in 0..COFFEE_MACHINES {
         println!("[COFFEE MACHINE {:?}]: starting", i);
@@ -23,6 +27,7 @@ fn get_coffee_machines(socket: Arc<UdpSocket>, addr: SocketAddr) -> Vec<Addr<Cof
                 id: i,
                 server_addr: addr,
                 socket: socket.clone(),
+                shop_id,
             }
             .start(),
         );
@@ -32,7 +37,7 @@ fn get_coffee_machines(socket: Arc<UdpSocket>, addr: SocketAddr) -> Vec<Addr<Cof
 }
 
 pub fn id_to_dataaddr(id: usize) -> SocketAddr {
-    let port = (2234 + id) as u16;
+    let port = (3234 + id) as u16;
     SocketAddr::from(([127, 0, 0, 1], port))
 }
 
@@ -51,7 +56,7 @@ fn main() -> Result<(), Error> {
         let server_addr = id_to_dataaddr(shop_id as usize);
 
         // Start coffee machines
-        let coffee_machines = get_coffee_machines(socket.clone(), server_addr);
+        let coffee_machines = get_coffee_machines(socket.clone(), server_addr, shop_id);
         for (idx, order) in orders.into_iter().enumerate() {
             let id = idx % coffee_machines.len();
             let coffee_machine = coffee_machines[id].clone();
