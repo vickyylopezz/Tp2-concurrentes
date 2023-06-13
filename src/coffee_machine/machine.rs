@@ -55,7 +55,7 @@ impl CoffeeMachine {
             self.server_addr,
             message,
             None,
-            Some(Duration::new(10, 0)),
+            Some(Duration::new(5, 0)),
             id,
         ) {
             Ok(_) => (),

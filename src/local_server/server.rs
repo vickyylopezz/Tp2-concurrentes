@@ -77,7 +77,7 @@ impl Server {
         let mut coffee_machine = self.clone();
         let mut server = self.clone();
         let mut threads_handler: Vec<JoinHandle<Result<(), Error>>> = vec![];
-
+        let coffee_machine_clone = coffee_machine.clone();
         threads_handler.push(thread::spawn(move || loop {
             if coffee_machine.shop_leader.am_i_leader()? {
                 println!(
@@ -101,7 +101,9 @@ impl Server {
         threads_handler.push(thread::spawn(move || loop {
             if server.shop_leader.am_i_leader()? {
                 println!("[SERVER FROM SHOP {}]: im leader server", server.shop_id);
-                server.receive_from_servers()?;
+                if let Err(err) = server.receive_from_servers() {
+                    println!("[SERVER FROM SHOP {}]: {:?}", coffee_machine_clone.shop_id, err);
+                }
             } else {
                 println!(
                     "[SERVER FROM SHOP {}]: im not leader server",
