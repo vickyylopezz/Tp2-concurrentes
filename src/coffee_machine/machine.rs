@@ -10,7 +10,8 @@ use std::{
 use crate::{coffee_machine::orders::Order, errors::Error, message_sender::MessageSender};
 
 const POINTS: &str = "points";
-const COMPLETED: u32 = 1;
+const COMPLETED: bool = true;
+const FAILED: bool = false;
 
 #[derive(Message)]
 #[rtype(result = "Result<(), Error>")]
@@ -102,9 +103,12 @@ impl CoffeeMachine {
     /// Returns false if there was a failure.
     fn is_completed(&self) -> bool {
         let mut rng = rand::thread_rng();
-        let num: u32 = rng.gen_range(0..=1);
-
-        num == COMPLETED
+        let num: u32 = rng.gen_range(0..=10);
+        if num <= 3 {
+            FAILED
+        } else {
+            COMPLETED
+        }
     }
 
     /// Handles process order.

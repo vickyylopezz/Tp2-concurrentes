@@ -24,15 +24,9 @@ impl MessageParser {
             "UP" => MessageParser::parser_up(words),
             "SYNC" => MessageParser::parser_sync(words),
             "SYNCSTART" => MessageParser::parse_sync_start(words),
-            "SYNCPART" => MessageParser::parse_sync_part(words),
             "SYNCEND" => MessageParser::parse_sync_end(words),
             _ => Err(Error::InvalidMessageFormat),
         }
-    }
-
-    fn parse_sync_part(mut words: Vec<&str>) -> Result<Action, Error> {
-        words.remove(0);
-        Ok(Action::SyncPart(words.join(" ")))
     }
 
     fn parse_sync_start(words: Vec<&str>) -> Result<Action, Error> {
