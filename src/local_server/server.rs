@@ -5,7 +5,7 @@ use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket},
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc,
+        Arc, Mutex,
     },
     thread::{self, JoinHandle},
     time::Duration,
@@ -28,7 +28,7 @@ pub struct Server {
     pub coffee_machine_socket: Arc<UdpSocket>,
     pub shop_id: u32,
     pub shops_amount: u32,
-    pub points_handler: PointsHandler,
+    pub points_handler: Arc<Mutex<PointsHandler>>,
     pub down: Arc<AtomicBool>,
     pub log: File,
     pub log_down: File,
@@ -62,7 +62,7 @@ impl Server {
             coffee_machine_socket,
             shop_id,
             shops_amount,
-            points_handler,
+            points_handler: Arc::new(Mutex::new(points_handler)),
             down: Arc::new(AtomicBool::new(false)),
             log: log_file,
             log_down: log_down_file,
@@ -80,38 +80,42 @@ impl Server {
         let coffee_machine_clone = coffee_machine.clone();
         threads_handler.push(thread::spawn(move || loop {
             if coffee_machine.shop_leader.am_i_leader()? {
-                println!(
-                    "[SERVER FROM SHOP {}]: im leader cm",
-                    coffee_machine.shop_id
-                );
+                // println!(
+                //     "[SERVER FROM SHOP {}]: im leader cm",
+                //     coffee_machine.shop_id
+                // );
                 if let Err(err) = coffee_machine.receive_from_coffee_machines_leader() {
-                    println!("[SERVER FROM SHOP {}]: {:?}", coffee_machine.shop_id, err);
+                    // println!("[SERVER FROM SHOP {}]: {:?}", coffee_machine.shop_id, err);
                 }
             } else {
-                println!(
-                    "[SERVER FROM SHOP {}]: im not leader cm",
-                    coffee_machine.shop_id
-                );
+                // println!(
+                //     "[SERVER FROM SHOP {}]: im not leader cm",
+                //     coffee_machine.shop_id
+                // );
                 if let Err(err) = coffee_machine.receive_from_coffee_machines_local_server() {
-                    println!("[SERVER FROM SHOP {}]: {:?}", coffee_machine.shop_id, err);
+                    // println!("[SERVER FROM SHOP {}]: {:?}", coffee_machine.shop_id, err);
                 }
             }
         }));
 
         threads_handler.push(thread::spawn(move || loop {
             if server.shop_leader.am_i_leader()? {
-                println!("[SERVER FROM SHOP {}]: im leader server", server.shop_id);
+                // println!("[SERVER FROM SHOP {}]: im leader server", server.shop_id);
                 if let Err(err) = server.receive_from_servers() {
+<<<<<<< HEAD
                     println!(
                         "[SERVER FROM SHOP {}]: {:?}",
                         coffee_machine_clone.shop_id, err
                     );
+=======
+                    // println!("[SERVER FROM SHOP {}]: {:?}", coffee_machine_clone.shop_id, err);
+>>>>>>> a3bdf862002b78beaea2ee4751877539fe44c98a
                 }
             } else {
-                println!(
-                    "[SERVER FROM SHOP {}]: im not leader server",
-                    server.shop_id
-                );
+                // println!(
+                //     "[SERVER FROM SHOP {}]: im not leader server",
+                //     server.shop_id
+                // );
                 if server.receive_from_leader().is_err() {
                     server.shop_leader.find_new();
                 };
@@ -378,11 +382,11 @@ impl Server {
                 if !self.down.load(Ordering::SeqCst) {
                     self.write_log(message);
 
-                    let msg = self.block_client(client_id);
+                    let msg = self.block_client(client_id);     
                     return Some(msg);
                 } else {
                     self.write_down_log(message);
-                    let msg = self.block_client(client_id);
+                    let msg = self.block_client(client_id);             
                     return Some(msg);
                 }
             }
@@ -407,13 +411,16 @@ impl Server {
                 println!("[SERVER FROM SHOP {}]: FAIL", self.shop_id);
                 if !self.down.load(Ordering::SeqCst) {
                     self.write_log(message);
-
-                    self.points_handler.unblock(client_id);
+                    if let Ok(mut lock) = self.points_handler.lock() {
+                        lock.unblock(client_id);
+                    }
                     return Some("ACK".to_string());
                 } else {
                     self.write_down_log(message);
 
-                    self.points_handler.unblock(client_id);
+                    if let Ok(mut lock) = self.points_handler.lock() {
+                        lock.unblock(client_id);
+                    }                    
                     return Some("ACK".to_string());
                 }
             }
@@ -549,8 +556,9 @@ impl Server {
                     } else {
                         self.write_down_log(message)
                     }
-                    self.points_handler.unblock(client_id);
-                    if shop_id == self.shop_id {
+                    if let Ok(mut lock) = self.points_handler.lock() {
+                        lock.unblock(client_id);
+                    }                    if shop_id == self.shop_id {
                         self.coffee_machine_socket
                             .send_to("ACK".as_bytes(), coffee_machine_addr(self.shop_id))
                             .expect("Error sending message to coffee machine");
@@ -572,7 +580,9 @@ impl Server {
     fn acumulate_points(&mut self, client_id: u32, method: Method) -> Option<String> {
         match method {
             Method::Cash => {
-                self.points_handler.unblock(client_id);
+                if let Ok(mut lock) = self.points_handler.lock() {
+                    lock.unblock(client_id);
+                }                
                 Some("ACK".to_string())
             }
             Method::Points => None,
@@ -585,14 +595,28 @@ impl Server {
                 format!("notEnough {}", client_id)
             }
         };
-        self.points_handler.unblock(client_id);
+        if let Ok(mut lock) = self.points_handler.lock() {
+            lock.unblock(client_id);
+        }
         message
     }
 
     fn update_points(&mut self, client_id: u32, points: i32, method: Method) -> Result<(), Error> {
         match method {
-            Method::Cash => self.points_handler.update_points(client_id, points),
-            Method::Points => self.points_handler.update_points(client_id, -points),
+            Method::Cash => {
+                    if let Ok(mut lock) = self.points_handler.lock() {
+                        return lock.update_points(client_id, points)
+                    } else {
+                        return Err(Error::Lock);
+                    }
+                },
+            Method::Points => {
+                    if let Ok(mut lock) = self.points_handler.lock() {
+                        return lock.update_points(client_id, -points)
+                    } else {
+                        return Err(Error::Lock);
+                    }
+                },
         }
     }
     fn write_log(&mut self, message: String) {
@@ -612,12 +636,17 @@ impl Server {
     }
 
     pub fn block_client(&mut self, client_id: u32) -> String {
-        match self.points_handler.block(client_id) {
-            Ok(_) => "ACK".to_string(),
-            Err(_) => {
-                format!("alreadyBlocked {}", client_id)
+        if let Ok(mut lock) = self.points_handler.lock() {
+            match lock.block(client_id) {
+                Ok(_) => return "ACK".to_string(),
+                Err(_) => {
+                    return format!("alreadyBlocked {}", client_id)
+                }
             }
+        } else {
+            "Error".to_string()
         }
+        
     }
 
     fn resend_message_to_leader(&mut self, message: String) {

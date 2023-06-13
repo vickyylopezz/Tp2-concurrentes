@@ -26,8 +26,8 @@ El envio de mensajes entre los servidores locales se realiza mediante el algorit
 Las cafeteras se comunican con el servidor local por medio de sockets. Hay 4 posibles mensajes que las cafeteras les pueden enviar al servidor:
 
 - **BLOCK** *id_cliente* *id_shop*: para bloquear la cuenta del cliente asociado. La cuenta de un cliente se bloquea sólo si desea pagar con puntos.
-- **COMPLETE** *id_cliente* *puntos* *forma_de_pago* *id_shop*: se envia si la cafetera pudo procesar correctamente el pedido y tiene como objetivos actualizar los puntos de la cuenta del cliente y desbloquearla.
-- **FAILURE** *id_cliente* *id_shop*: se envia si la cafetera no pudo procesar correctamente el pedido y el objetivo es desbloquear la cuenta del cliente asociado.
+- **COMPLETE** *id_cliente* *puntos* *forma_de_pago* *id_shop*: se envia si la cafetera pudo procesar correctamente el pedido y tiene como objetivos actualizar los puntos de la cuenta del cliente y desbloquearla en caso de que el cliente haya querido pagar con puntos.
+- **FAILURE** *id_cliente* *id_shop*: se envia si la cafetera no pudo procesar correctamente el pedido y el objetivo es desbloquear la cuenta del cliente asociado en caso de que el cliente haya querido pagar con puntos.
 
 Por otro lado, los mensajes que puede recibir una cafetera de un servidor local:
 
@@ -79,6 +79,29 @@ Siempre que una cafetera le envie un mensaje al servidor del local y no le llega
 
 Usamos conexiones UDP para disminuir la cantidad de conexiones a establecer entre las entidades del sistema pero implementamos el servicio de confirmación de mensajes para chequear que no haya pérdidas de mensajes.
 
+### Servidores locales
+
+### Caída de servidores
+
+Cuando un servidor inicia, ejecuta la elección del lider, determina quién es el servidor lider (siempre es el servidor com mayor *shop_id*) y comienza a escuchar los mensajes que le envian las cafeteras. Si el servidor está conectado en la red, va a escribir los mensajes que recibe de las cafeteras en un archivo de texto denominado log_{*shop_id*}. Si, por el contrario, está caído, escribe los mensajes en log_down_{*shop_id*}.
+
+Cuando un servidor deja de responder por un determinado tiempo, se considera que está caído:
+
+- Cuando el servidor lider se cae, los demas servidores van a proceder a ejecutar una nueva elección del lider.
+- Cuando un servidor se cae va a continuar recibiendo mensajes de las cafeteras y los va a guardar en el archivo log_down_{*shop_id*}. Un servidor caído solo va a guardar pedidos que se paguen con dinero. Si se quiere incorporar a la red, ejecuta la elección del lider para conocer quien es el servidor lider y le va a pedir una sincronización para actualizar las cuentas de los clientes en el resto de los servidores de las sucursales del local.
+
+### Reenvio de mensajes
+
+Cuando un servidor recibe un mensaje de una cafetera, se lo va a reenviar al servidor lider. El lider procesa el mensaje:
+
+- **BLOCK** *id_cliente* *id_shop*: si el cliente quiere pagar con puntos, verifica que la cuenta no está bloqueado: si está bloqueda devuelve un client already blocked. Caso contrario, bloquea la cuenta y devuelve un ack.
+- **COMPLETE** *id_cliente* *puntos* *forma_de_pago* *id_shop*:
+  - Si el cliente quiere pagar con puntos: verifica que tenga los puntos necesarios. Si tiene los tiene, disminuye la cantidad de puntos que tiene el cliente en su cuenta y devuelve un ack. Caso contrario, devuelve un not enoguh points.
+  - Si el cliente quiere pagar con dinero, aumenta la cantidad de puntos que tiene el cliente en su cuenta.
+- **FAILURE** *id_cliente* *id_shop*: si el cliente quiere pagar con puntos, desbloquea la cuenta.
+
+y luego le envia el mensaje al resto de los servidores para que lo procesen. Por lo tanto, los servidores que no son lideres van a actualizar los puntos de las cuentas de los clientes una vez que ya haya sido actualizado por el servidor lider.
+
 ## **Hipótesis**
 
 - Los servidores locales no se caen permanentemente.
@@ -88,9 +111,15 @@ Usamos conexiones UDP para disminuir la cantidad de conexiones a establecer entr
 
 Para ejecutar cada servidor local es necesario correr:
 
-```cargo run --bin local_server <id de la sucursal> <cantidad total de sucursales>```
+```cargo run --bin local_server <shop_id> <shop_amount>```
 
 Para ejecutar las cafeteras es necesario correr:
-```cargo run --bin coffee_machine <archivo con ordenes> <id de la sucursal>```
+```cargo run --bin coffee_machine <orders_filename> <shop_id>```
+
+Para ejecutar UP de un servidor:
+```cargo run --bin up <shop_id>```
+
+Para ejecutar DOWN de un servidor:
+```cargo run --bin down <shop_id>```
 
 ## **Casos de Prueba**

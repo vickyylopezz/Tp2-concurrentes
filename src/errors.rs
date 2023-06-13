@@ -23,4 +23,5 @@ pub enum Error {
     UserAlreadyUnblocked,
     Down,
     Sync,
+    Lock
 }
