@@ -175,7 +175,7 @@ cargo run --bin down 0
 cargo run --bin up 0
 ```
 
-### **Caso 4: Local con 2 sucursales, las 2 sucursales reciben pedidos de los mismos clientes, se cae el servidor lider y se vuelve a incorporar a la red**
+### **Caso 4: Local con 2 sucursales, las 2 sucursales reciben pedidos de los mismos clientes, se cae el servidor no lider y se vuelve a incorporar a la red**
 
 1. Levantar servidores:
 ```
