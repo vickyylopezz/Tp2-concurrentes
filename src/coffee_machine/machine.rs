@@ -83,7 +83,7 @@ impl CoffeeMachine {
 
     /// Handles BLOCK message.
     fn handle_block_message(&mut self, order: Order, id: u32) -> Result<(), Error> {
-        let block_message = format!("block {}", order.customer_id);
+        let block_message = format!("block {} {}", order.customer_id, self.shop_id);
         match self.send_message(block_message, id) {
             Ok(_) => (),
             Err(err) => match err {
@@ -126,7 +126,10 @@ impl CoffeeMachine {
 
     /// Change order's payment method to cash.
     fn handle_not_enough_points(&mut self, order: Order, id: u32) -> Result<(), Error> {
-        let complete_message = format!("complete {} {} cash", order.customer_id, order.price);
+        let complete_message = format!(
+            "complete {} {} cash {}",
+            order.customer_id, order.price, self.shop_id
+        );
         self.send_message(complete_message, id)?;
 
         Ok(())
@@ -135,8 +138,8 @@ impl CoffeeMachine {
     /// Handles COMPLETE message.
     fn handle_complete_message(&mut self, order: Order, id: u32) -> Result<(), Error> {
         let complete_message = format!(
-            "complete {} {} {}",
-            order.customer_id, order.price, order.payment_method
+            "complete {} {} {} {}",
+            order.customer_id, order.price, order.payment_method, self.shop_id
         );
         match self.send_message(complete_message, id) {
             Ok(_) => (),
@@ -151,7 +154,7 @@ impl CoffeeMachine {
 
     /// Handles FAIL message.
     fn handle_fail_message(&mut self, order: Order, id: u32) -> Result<(), Error> {
-        let fail_message = format!("fail {}", order.customer_id);
+        let fail_message = format!("fail {} {}", order.customer_id, self.shop_id);
         self.send_message(fail_message, id)?;
 
         Ok(())
