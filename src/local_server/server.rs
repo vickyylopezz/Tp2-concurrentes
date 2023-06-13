@@ -38,6 +38,7 @@ pub struct Server {
 }
 
 impl Server {
+    /// Creates an instance of [`Server`].
     pub fn new(shop_id: u32, shops_amount: u32) -> Server {
         let addr = id_to_dataaddr(shop_id as usize);
         let socket = Arc::new(UdpSocket::bind(addr).expect("Error when binding server socket"));
@@ -72,6 +73,7 @@ impl Server {
         }
     }
 
+    /// Handles messages from other shop servers and coffee machines.
     pub fn run(self) -> Result<(), Error> {
         let mut coffee_machine = self.clone();
         let mut server = self.clone();
@@ -109,10 +111,11 @@ impl Server {
         Ok(())
     }
 
+    /// Handles messages from coffee machines.
     fn receive_from_coffee_machines_leader(&mut self) -> Result<(), Error> {
         let mut buf = [0u8; 1024];
         let _ = self.coffee_machine_socket.set_read_timeout(Some(TIMEOUT));
-        if !self.sync.load(Ordering::SeqCst){
+        if !self.sync.load(Ordering::SeqCst) {
             match self.coffee_machine_socket.recv_from(&mut buf) {
                 Ok((size, from)) => {
                     let message = String::from_utf8_lossy(&buf[..size]).into_owned();
@@ -121,8 +124,8 @@ impl Server {
                         self.shop_id, message, from
                     );
                     self.handle_extra_messages(message.clone());
-    
-                    if let Some(msg) = self.responder_leader(message.clone(), from) {
+
+                    if let Some(msg) = self.answer_leader(message.clone(), from) {
                         if !self.down.load(Ordering::SeqCst) {
                             self.resend_to_servers(message)
                         };
@@ -137,12 +140,12 @@ impl Server {
                 }
                 Err(_) => return Err(Error::Timeout),
             }
-    
         }
-        
+
         Err(Error::Sync)
     }
 
+    /// Handles messages from servers.
     fn receive_from_servers(&mut self) -> Result<(), Error> {
         let mut buf = [0u8; 1024];
         let _ = self.socket.set_read_timeout(Some(TIMEOUT));
@@ -154,7 +157,7 @@ impl Server {
                         "[SERVER FROM SHOP {}]: get {} from {}",
                         self.shop_id, message, from
                     );
-                    if let Some(msg) = self.responder_leader(message.clone(), from) {
+                    if let Some(msg) = self.answer_leader(message.clone(), from) {
                         if !self.sync.load(Ordering::SeqCst) {
                             self.resend_to_servers(message)
                         };
@@ -175,7 +178,7 @@ impl Server {
         Err(Error::Down)
     }
 
-    /// Receives messages from the leader
+    /// Receives messages from leader server.
     fn receive_from_leader(&mut self) -> Result<String, Error> {
         let mut buf = [0u8; 1024];
         let _ = self.socket.set_read_timeout(Some(Duration::new(3, 0)));
@@ -188,7 +191,7 @@ impl Server {
                         "[SERVER FROM SHOP {}]: get {} from {}",
                         self.shop_id, message, from
                     );
-                    if let Some(msg) = self.responder_local_server(message.clone(), from) {
+                    if let Some(msg) = self.answer_local_server(message.clone(), from) {
                         println!(
                             "[SERVER FROM SHOP {}]: send {} to {}",
                             self.shop_id, msg, from
@@ -205,7 +208,7 @@ impl Server {
         }
     }
 
-    /// Receives messages from the coffees machines
+    /// Receives messages from coffees machines.
     fn receive_from_coffee_machines_local_server(&mut self) -> Result<(), Error> {
         let mut buf = [0u8; 1024];
         let _ = self.coffee_machine_socket.set_read_timeout(Some(TIMEOUT));
@@ -223,7 +226,7 @@ impl Server {
                         self.resend_message_to_leader(message);
                         return Ok(());
                     } else if extra != Some(Action::Up) {
-                        if let Some(msg) = self.responder_local_server(message, from) {
+                        if let Some(msg) = self.answer_local_server(message, from) {
                             println!(
                                 "[SERVER FROM SHOP {}]: send {} to {}",
                                 self.shop_id, msg, from
@@ -241,6 +244,7 @@ impl Server {
         }
     }
 
+    /// Handle messages involved in synchronization process.
     fn handle_extra_messages(&mut self, message: String) -> Option<Action> {
         if let Ok(msg) = MessageParser::parse(message) {
             match msg {
@@ -261,6 +265,8 @@ impl Server {
         }
         None
     }
+
+    /// Handles synchronization with other servers.
     fn sync_with_leader(&mut self) {
         self.shop_leader.up();
         self.shop_leader.find_new();
@@ -270,11 +276,7 @@ impl Server {
         let msg = format!("SYNC {}", line_count);
         if let Ok(leader) = self.shop_leader.am_i_leader() {
             if leader {
-                //TODO: leader down
                 if let Ok(addr) = self.broadcast() {
-                    print!("\x1b[31m"); // Texto en color rojo
-                    println!("Me constestó: {}", addr);
-                    print!("\x1b[0m");
                     self.send_down_log_broadcast();
 
                     self.resend_message(msg, addr);
@@ -287,13 +289,11 @@ impl Server {
             }
         }
         self.down.store(false, Ordering::SeqCst);
-        //self.sync.store(false, Ordering::SeqCst);
-        println!("ACA FUE LA SINCRONIZACION");
     }
 
     fn send_down_log_broadcast(&mut self) {
         let log_name = format!("log_down_{}.txt", self.shop_id);
-        let reader = BufReader::new(File::open(log_name).expect("Error opening the log file"));
+        let reader = BufReader::new(File::open(log_name).expect("Error when opening the log file"));
         for line in reader.lines() {
             match line {
                 Ok(line) => {
@@ -304,34 +304,34 @@ impl Server {
                                 "[SERVER FROM SHOP {}]: send {} to {}",
                                 self.shop_id, line, addr
                             );
-                            // self.write_log(line.clone());
                             self.socket
                                 .send_to(line.as_bytes(), addr)
-                                .expect("Error sending message");
+                                .expect("Error when sending message");
                         }
                     }
                 }
                 Err(err) => {
-                    println!("Error reading line: {}", err);
+                    println!("Error when reading line: {}", err);
                     return;
                 }
             }
         }
     }
 
+    /// Send TRY to all servers.
     fn broadcast(&mut self) -> Result<SocketAddr, Error> {
         for i in 0..self.shops_amount {
             let addr = id_to_dataaddr(i as usize);
             if i != self.shop_id {
                 self.socket.send_to("TRY".as_bytes(), addr).unwrap();
-                
             }
         }
         let mut buf = [0u8; 1024];
-        self.socket.set_read_timeout(Some(Duration::from_secs(3))).expect("Error setin");
+        self.socket
+            .set_read_timeout(Some(Duration::from_secs(3)))
+            .expect("Error setting timeout");
         if let Ok((_, from)) = self.socket.recv_from(&mut buf) {
-            println!("[SERVER FROM SHOP {}]: get ACK from {}",
-            self.shop_id, from);
+            println!("[SERVER FROM SHOP {}]: get ACK from {}", self.shop_id, from);
             return Ok(from);
         }
         Err(Error::Timeout)
@@ -339,22 +339,23 @@ impl Server {
 
     fn send_down_log(&mut self, leader_addr: SocketAddr) {
         let log_name = format!("log_down_{}.txt", self.shop_id);
-        let reader = BufReader::new(File::open(log_name).expect("Error opening the log file"));
+        let reader = BufReader::new(File::open(log_name).expect("Error when opening the log file"));
         for line in reader.lines() {
             match line {
                 Ok(line) => {
                     self.socket
                         .send_to(line.as_bytes(), leader_addr)
-                        .expect("Error sending message");
+                        .expect("Error when sending message");
                 }
                 Err(err) => {
-                    println!("Error reading line: {}", err);
+                    println!("Error when reading line: {}", err);
                     return;
                 }
             }
         }
     }
 
+    /// Resend messages to a server.
     fn resend_message(&self, message: String, from: SocketAddr) {
         println!(
             "[SERVER FROM SHOP {}] resend {} to {}",
@@ -365,6 +366,7 @@ impl Server {
             .expect("Error sending message");
     }
 
+    /// Handles the message received from a coffee machine.
     pub fn process_action(
         &mut self,
         message: String,
@@ -393,7 +395,7 @@ impl Server {
                     let msg = self.complete_order(client_id, price, method);
                     return Some(msg);
                 } else {
-                    let msg = self.acumulate_points(client_id, method);
+                    let msg = self.accumulate_points(client_id, method);
                     if msg.is_some() {
                         self.write_down_log(message);
                         return msg;
@@ -431,7 +433,8 @@ impl Server {
         None
     }
 
-    pub fn responder_leader(&mut self, message: String, from: SocketAddr) -> Option<String> {
+    /// Gets an answer to the message received from leader.
+    pub fn answer_leader(&mut self, message: String, from: SocketAddr) -> Option<String> {
         let act = match MessageParser::parse(message.clone()) {
             Ok(m) => m,
             Err(_) => return None,
@@ -458,6 +461,7 @@ impl Server {
         }
     }
 
+    /// Handles synchronization.
     fn send_sync(&mut self, lines: u32, from: SocketAddr) {
         let msg_start: &str = "SYNCSTART";
         self.socket
@@ -491,7 +495,8 @@ impl Server {
             .expect("Error sending message");
     }
 
-    pub fn responder_local_server(&mut self, message: String, from: SocketAddr) -> Option<String> {
+    /// Gets an answer to the message received from local server.
+    pub fn answer_local_server(&mut self, message: String, from: SocketAddr) -> Option<String> {
         if let Ok(msg) = MessageParser::parse(message.clone()) {
             match msg {
                 Action::Block(client_id, shop_id) => {
@@ -522,7 +527,7 @@ impl Server {
                         }
                         return Some(msg);
                     } else {
-                        let msg = match self.acumulate_points(client_id, method) {
+                        let msg = match self.accumulate_points(client_id, method) {
                             Some(msg) => {
                                 self.write_down_log(message);
                                 msg
@@ -567,7 +572,7 @@ impl Server {
         None
     }
 
-    fn acumulate_points(&mut self, client_id: u32, method: Method) -> Option<String> {
+    fn accumulate_points(&mut self, client_id: u32, method: Method) -> Option<String> {
         match method {
             Method::Cash => {
                 if let Ok(mut lock) = self.points_handler.lock() {
@@ -578,6 +583,9 @@ impl Server {
             Method::Points => None,
         }
     }
+
+    /// Returns an ACK if the client account was successfully updated.
+    /// Returns notEnough when the client does not has enough points to pay the order.
     fn complete_order(&mut self, client_id: u32, price: u32, method: Method) -> String {
         let message = match self.update_points(client_id, price as i32, method) {
             Ok(_) => "ACK".to_string(),
@@ -591,6 +599,8 @@ impl Server {
         message
     }
 
+    /// Handles payment method. If the client wants to pay with points, she/he has fewer points.
+    /// If wants yo pay with cash, she/he has more points.
     fn update_points(&mut self, client_id: u32, points: i32, method: Method) -> Result<(), Error> {
         match method {
             Method::Cash => {
@@ -609,6 +619,8 @@ impl Server {
             }
         }
     }
+
+    /// Writes the message in server's log file.
     fn write_log(&mut self, message: String) {
         let mut log_msg = message;
         log_msg.push('\n');
@@ -617,6 +629,7 @@ impl Server {
             .expect("Error writing log file");
     }
 
+    /// Writes the message in server's log_down file.
     fn write_down_log(&mut self, message: String) {
         let mut log_msg = message;
         log_msg.push('\n');
@@ -625,6 +638,8 @@ impl Server {
             .expect("Error writing log file");
     }
 
+    /// Returns an ACK if the client accounts can be successfully blocked.
+    /// Returns alreadyBlocked when the client account it is been used.
     pub fn block_client(&mut self, client_id: u32) -> String {
         if let Ok(mut lock) = self.points_handler.lock() {
             match lock.block(client_id) {
@@ -636,6 +651,7 @@ impl Server {
         }
     }
 
+    /// Resend the message received to the leader server.
     fn resend_message_to_leader(&mut self, message: String) {
         let leader_id = self.shop_leader.get_leader_id().unwrap();
         let leader_addr = id_to_dataaddr(leader_id);
@@ -649,8 +665,8 @@ impl Server {
             .expect("Error sending message to leader");
     }
 
+    /// Resend the message received to others server.
     fn resend_to_servers(&mut self, message: String) {
-        //Send update to the others servers
         for i in 0..self.shops_amount {
             let addr = id_to_dataaddr(i as usize);
 
@@ -666,6 +682,7 @@ impl Server {
         }
     }
 
+    /// Creates an clone instance of [`Server`].
     fn clone(&self) -> Server {
         Server {
             addr: self.addr,
@@ -690,6 +707,7 @@ impl Server {
     }
 }
 
+/// Returns the socket address of the coffee machines that sends messages to the server with shop_id.
 fn coffee_machine_addr(shop_id: u32) -> SocketAddr {
     let ip_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
     let port = 8000 + shop_id as u16;

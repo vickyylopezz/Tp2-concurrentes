@@ -60,15 +60,6 @@ impl PointsHandler {
         }
         Ok(())
     }
-
-    /// Acumulates points to the associated client id.
-    pub fn acumulate(&mut self, client_id: u32, points: i32) {
-        if self.update_points(client_id, points).is_ok() {
-            let current = self.clone().get_client(client_id);
-            let updated_points = current.0 + points;
-            self.points.insert(client_id, (updated_points, current.1));
-        }
-    }
 }
 
 impl Default for PointsHandler {
