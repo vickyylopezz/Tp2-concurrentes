@@ -89,7 +89,7 @@ impl LeaderElection {
                 return;
             }
         }
-        println!("[SERVER OF SHOP {}]: finding new leader", self.id);
+        println!("[SERVER OF SHOP {}]: Finding new leader", self.id);
         self.set_leader_id(None);
 
         // Send ELECTION message to all shops

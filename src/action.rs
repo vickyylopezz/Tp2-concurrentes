@@ -13,6 +13,5 @@ pub enum Action {
     Down,
     Sync(u32),
     SyncStart,
-    SyncPart(String),
     SyncEnd,
 }
