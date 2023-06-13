@@ -79,7 +79,7 @@ Siempre que una cafetera le envie un mensaje al servidor del local y no le llega
 
 Usamos conexiones UDP para disminuir la cantidad de conexiones a establecer entre las entidades del sistema pero implementamos el servicio de confirmación de mensajes para chequear que no haya pérdidas de mensajes.
 
-### Servidores locales
+## Servidores locales
 
 ### Caída de servidores
 
@@ -110,11 +110,10 @@ y luego le envia el mensaje al resto de los servidores para que lo procesen. Por
 ## **Ejecución del Programa**
 
 Para ejecutar cada servidor local es necesario correr:
-
 ```cargo run --bin local_server <shop_id> <shop_amount>```
 
 Para ejecutar las cafeteras es necesario correr:
-```cargo run --bin coffee_machine <orders_filename> <shop_id>```
+```cargo run --bin coffee_machine <orders.json> <shop_id>```
 
 Para ejecutar UP de un servidor:
 ```cargo run --bin up <shop_id>```
@@ -123,3 +122,79 @@ Para ejecutar DOWN de un servidor:
 ```cargo run --bin down <shop_id>```
 
 ## **Casos de Prueba**
+
+### **Caso 1: Local con 2 sucursales, sólo uno de esos sucursales reciben pedidos y no se caen los servidores**
+
+1. Levantar servidores:
+
+```
+cargo run --bin local_server 0 2
+cargo run --bin local_server 1 2
+```
+
+2. Levantar cafeteras:
+```
+cargo run --bin coffee_machine orders.json 0
+```
+
+### **Caso 2: Local con 2 sucursales, las 2 sucursales reciben pedidos de los mismos clientes, y no se caen los servidores**
+
+1. Levantar servidores:
+ ```
+ cargo run --bin local_server 0 2
+ cargo run --bin local_server 1 2
+ ```
+
+2. Levantar cafeteras:
+
+ ```
+ cargo run --bin coffee_machine orders.json 0
+ cargo run --bin coffee_machine orders.json 1
+ ```
+
+### **Caso 3: Local con 2 sucursales, sólo uno de esos sucursales reciben pedidos, se cae el servidor no lider y se vuelve a incorporar a la red**
+
+1. Levantar servidores:
+```
+cargo run --bin local_server 0 2
+cargo run --bin local_server 1 2
+```
+
+2. Levantar cafeteras:
+```
+cargo run --bin coffee_machine orders.json 0
+```
+
+3. Desconectar servidor no lider:
+```
+cargo run --bin down 0
+```
+
+4. Conectar servidor no lider:
+```
+cargo run --bin up 0
+```
+
+### **Caso 4: Local con 2 sucursales, las 2 sucursales reciben pedidos de los mismos clientes, se cae el servidor lider y se vuelve a incorporar a la red**
+
+1. Levantar servidores:
+```
+cargo run --bin local_server 0 2
+cargo run --bin local_server 1 2
+```
+
+2. Levantar cafeteras:
+```
+cargo run --bin coffee_machine orders.json 0
+cargo run --bin coffee_machine orders.json 1
+```
+
+3. Desconectar servidor no lider:
+```
+cargo run --bin down 0
+```
+
+4. Conectar servidor no lider:
+```
+cargo run --bin up 0
+```
