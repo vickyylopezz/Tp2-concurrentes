@@ -102,7 +102,10 @@ impl Server {
             if server.shop_leader.am_i_leader()? {
                 println!("[SERVER FROM SHOP {}]: im leader server", server.shop_id);
                 if let Err(err) = server.receive_from_servers() {
-                    println!("[SERVER FROM SHOP {}]: {:?}", coffee_machine_clone.shop_id, err);
+                    println!(
+                        "[SERVER FROM SHOP {}]: {:?}",
+                        coffee_machine_clone.shop_id, err
+                    );
                 }
             } else {
                 println!(
