@@ -23,6 +23,7 @@ pub struct CoffeeMachine {
     pub id: u32,
     pub server_addr: SocketAddr,
     pub socket: Arc<UdpSocket>,
+    pub shop_id: u32,
 }
 
 impl Actor for CoffeeMachine {
@@ -54,7 +55,7 @@ impl CoffeeMachine {
             self.server_addr,
             message,
             None,
-            None,
+            Some(Duration::new(10, 0)),
             id,
         ) {
             Ok(_) => (),
