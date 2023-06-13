@@ -89,7 +89,9 @@ impl LeaderElection {
                 return;
             }
         }
+        print!("\x1b[34m");
         println!("[SERVER OF SHOP {}]: Finding new leader", self.id);
+        print!("\x1b[0m");
         self.set_leader_id(None);
 
         // Send ELECTION message to all shops
@@ -130,18 +132,10 @@ impl LeaderElection {
     fn safe_send_next(&self, msg: &[u8], id: usize) -> Result<(), Error> {
         let next_id = self.next(id);
         if next_id == self.id {
-            // println!(
-            //     "[SERVER OF SHOP {}]: send {} to {}",
-            //     self.id, msg[0] as char, next_id
-            // );
             return Err(Error::Timeout);
         }
         self.clone_leader_election().set_got_ack(None);
 
-        // println!(
-        //     "[SERVER OF SHOP {}]: send {} to SERVER OF SHOP {}",
-        //     self.id, msg[0] as char, next_id
-        // );
         let _ = self.socket.send_to(msg, id_to_ctrladdr(next_id));
 
         if let Ok(got_ack_lock) = self.got_ack.0.lock() {
@@ -221,25 +215,15 @@ impl LeaderElection {
             let (msg_type, mut ids) = self.parse_message(&buf)?;
             match msg_type {
                 b'A' => {
-                    // println!("[SERVER OF SHOP {}]: get ACK from {}", self.id, from);
                     self.clone_leader_election().add_id_to_got_ack(&ids);
                 }
                 b'E' => {
-                    // println!(
-                    //     "[SERVER OF SHOP {}]: get ELECTION from {}, ids {:?}",
-                    //     self.id, from, ids
-                    // );
-                    // println!("[SERVER OF SHOP {}]: send ACK to {}", self.id, from);
                     self.socket
                         .send_to(&self.ids_to_msg(b'A', &[self.id]), from)
                         .expect("Error when sending message");
                     if ids.contains(&self.id) {
                         // Message has been sent to all nodes, send COORDINATOR message
                         if let Some(winner) = ids.iter().max() {
-                            // println!(
-                            //     "[SERVER OF SHOP {}]: send COORDINATOR to {}",
-                            //     self.id, from
-                            // );
                             self.socket
                                 .send_to(&self.ids_to_msg(b'C', &[*winner]), from)
                                 .expect("Error when sending message");
@@ -253,14 +237,9 @@ impl LeaderElection {
                     }
                 }
                 b'C' => {
-                    // println!(
-                    //     "[SERVER OF SHOP {}]: get COORDINATOR from {}, ids: {:?}",
-                    //     self.id, from, ids
-                    // );
                     let winner_id = Some(ids[0]);
                     self.clone_leader_election().set_leader_id(winner_id);
                     self.leader_id.1.notify_all();
-                    // println!("[SERVER OF SHOP {}]: send ACK to {}", self.id, from);
                     self.socket
                         .send_to(&self.ids_to_msg(b'A', &[self.id]), from)
                         .expect("Error when sending message");
