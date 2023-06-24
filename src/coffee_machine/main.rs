@@ -2,16 +2,23 @@ use actix::{Actor, Addr, Message};
 use actix_rt::System;
 use rand::Rng;
 use std::{
+    future::Future,
     net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket},
-    sync::Arc, time::Duration, thread::sleep, pin::Pin, future::Future,
+    pin::Pin,
+    sync::Arc,
+    thread::sleep,
+    time::Duration,
 };
 use tp2::{
     coffee_machine::{
+        self,
         input_controller::InputController,
-        machine::{CoffeeMachine, Block, Complete, Fail}, orders::Order, self,
+        machine::{Block, CoffeeMachine, Complete, Fail},
+        orders::Order,
     },
     constants::COFFEE_MACHINES,
-    errors::Error, message_sender::MessageSender,
+    errors::Error,
+    message_sender::MessageSender,
 };
 
 const POINTS: &str = "points";
@@ -45,8 +52,8 @@ pub fn id_to_dataaddr(id: usize) -> SocketAddr {
     let port = (3234 + id) as u16;
     SocketAddr::from(([127, 0, 0, 1], port))
 }
- /// Returns true if order's payment method is points.
- fn pay_with_points(order: Order) -> bool {
+/// Returns true if order's payment method is points.
+fn pay_with_points(order: Order) -> bool {
     order.payment_method == *POINTS
 }
 
@@ -66,79 +73,112 @@ fn set_attempts(attempts: Option<usize>) -> usize {
     attempts.unwrap_or(1)
 }
 
-async fn handle_block_message(socket: Arc<UdpSocket>, id: usize, attempts: Option<usize>, coffee_machine: Addr<CoffeeMachine>, order: Order) -> Result<(), Error> {
-        let mut attempts = set_attempts(attempts);
-        while attempts > 0 {
-            attempts -= 1;
-            coffee_machine.send(Block {
+async fn handle_block_message(
+    socket: Arc<UdpSocket>,
+    id: usize,
+    attempts: Option<usize>,
+    coffee_machine: Addr<CoffeeMachine>,
+    order: Order,
+) -> Result<(), Error> {
+    let mut attempts = set_attempts(attempts);
+    while attempts > 0 {
+        attempts -= 1;
+        coffee_machine
+            .send(Block {
                 order: order.clone(),
             })
             .await;
-            match MessageSender::recv(socket.clone(), id as u32, Some(Duration::new(5, 0))){
-                Ok(_) => break,
-                Err(err) => match  err {
-                    Error::ClientAlreadyBlocked => {
-                        sleep(Duration::from_secs(10));
-                        if pay_with_points(order.clone()) {
-                            handle_block_message(socket.clone(), id, Some(attempts), coffee_machine.clone(), order.clone());
-                        }
-                    },
-                    Error::Timeout => continue,
-                    _ => return Err(Error::InvalidMessage),
-
-                    
-                },
-            }        
+        match MessageSender::recv(socket.clone(), id as u32, Some(Duration::new(5, 0))) {
+            Ok(_) => break,
+            Err(err) => match err {
+                Error::ClientAlreadyBlocked => {
+                    sleep(Duration::from_secs(10));
+                    if pay_with_points(order.clone()) {
+                        handle_block_message(
+                            socket.clone(),
+                            id,
+                            Some(attempts),
+                            coffee_machine.clone(),
+                            order.clone(),
+                        );
+                    }
+                }
+                Error::Timeout => continue,
+                _ => return Err(Error::InvalidMessage),
+            },
         }
-        Ok(())
+    }
+    Ok(())
 }
 
-async fn handle_complete_message(socket: Arc<UdpSocket>, id: usize, attempts: Option<usize>, coffee_machine: Addr<CoffeeMachine>, mut order: Order) -> Result<(), Error>{
+async fn handle_complete_message(
+    socket: Arc<UdpSocket>,
+    id: usize,
+    attempts: Option<usize>,
+    coffee_machine: Addr<CoffeeMachine>,
+    mut order: Order,
+) -> Result<(), Error> {
     let mut attempts = set_attempts(attempts);
     while attempts > 0 {
         attempts -= 1;
-        coffee_machine.send(Complete {
-            order: order.clone(),
-        })
-        .await;
-        match MessageSender::recv(socket.clone(), id as u32, Some(Duration::new(5, 0))){
+        coffee_machine
+            .send(Complete {
+                order: order.clone(),
+            })
+            .await;
+        match MessageSender::recv(socket.clone(), id as u32, Some(Duration::new(5, 0))) {
             Ok(_) => break,
-            Err(err) => match  err {
+            Err(err) => match err {
                 Error::NotEnoughPoints => {
                     order.payment_method = "cash".to_string();
-                    handle_complete_message(socket.clone(), id, Some(attempts), coffee_machine.clone(), order.clone());
-                },
+                    handle_complete_message(
+                        socket.clone(),
+                        id,
+                        Some(attempts),
+                        coffee_machine.clone(),
+                        order.clone(),
+                    );
+                }
+                Error::Timeout => continue,
                 _ => return Err(Error::InvalidMessage),
-
-                
             },
-        }        
+        }
     }
     Ok(())
-} 
+}
 
-async fn handle_fail_message(socket: Arc<UdpSocket>, id: usize, attempts: Option<usize>, coffee_machine: Addr<CoffeeMachine>, order: Order) -> Result<(), Error>{
+async fn handle_fail_message(
+    socket: Arc<UdpSocket>,
+    id: usize,
+    attempts: Option<usize>,
+    coffee_machine: Addr<CoffeeMachine>,
+    order: Order,
+) -> Result<(), Error> {
     let mut attempts = set_attempts(attempts);
     while attempts > 0 {
         attempts -= 1;
-        coffee_machine.send(Fail {
-            order: order.clone(),
-        })
-        .await;
-        match MessageSender::recv(socket.clone(), id as u32, Some(Duration::new(5, 0))){
+        coffee_machine
+            .send(Fail {
+                order: order.clone(),
+            })
+            .await;
+        match MessageSender::recv(socket.clone(), id as u32, Some(Duration::new(5, 0))) {
             Ok(_) => break,
-            Err(_) => return Err(Error::InvalidMessage),
-        }        
+            Err(err) => match err {
+                Error::Timeout => continue,
+                _ => return Err(Error::InvalidMessage),
+            },
+        }
     }
     Ok(())
-} 
+}
 fn main() -> Result<(), Error> {
     System::new().block_on(async {
         let controller = InputController::new(std::env::args().nth(1), std::env::args().nth(2))?;
         let shop_id = controller.shop_id;
         let orders = controller.get_orders()?;
         let attempts = 3;
-        
+
         let ip_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
         let port = 8000 + shop_id as u16;
         let addr = SocketAddr::new(ip_addr, port);
@@ -152,9 +192,16 @@ fn main() -> Result<(), Error> {
         for (idx, order) in orders.into_iter().enumerate() {
             let id = idx % coffee_machines.len();
             let coffee_machine = coffee_machines[id].clone();
-           
+
             if pay_with_points(order.clone()) {
-                handle_block_message(socket.clone(), id, Some(attempts), coffee_machine.clone(), order.clone()).await;
+                handle_block_message(
+                    socket.clone(),
+                    id,
+                    Some(attempts),
+                    coffee_machine.clone(),
+                    order.clone(),
+                )
+                .await;
             }
 
             sleep(Duration::from_secs(3));
@@ -163,7 +210,14 @@ fn main() -> Result<(), Error> {
                 id, order.id
             );
             if is_completed() {
-                handle_complete_message(socket.clone(), id, Some(attempts), coffee_machine.clone(), order.clone()).await;
+                handle_complete_message(
+                    socket.clone(),
+                    id,
+                    Some(attempts),
+                    coffee_machine.clone(),
+                    order.clone(),
+                )
+                .await;
             } else {
                 handle_fail_message(socket.clone(), id, Some(attempts), coffee_machine, order);
             };

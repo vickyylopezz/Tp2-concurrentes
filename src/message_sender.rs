@@ -23,27 +23,27 @@ impl MessageSender {
         // let mut buf = [0u8; 1024];
         // while attempts > 0 {
         //     attempts -= 1;
-            send_message(&socket, message.clone(), addr, id)?;
-            // match socket.recv_from(&mut buf) {
-            //     Ok((size, _from)) => {
-            //         let message = String::from_utf8_lossy(&buf[..size]);
-            //         println!("[COFFEE MACHINE {}]: get {}", id, message);
-            //         if let Ok(received) = MessageParser::parse(message.into_owned()) {
-            //             match received {
-            //                 Action::NotEnoughPoints(_) => return Err(Error::NotEnoughPoints),
-            //                 Action::ClientAlreadyBlocked(_) => {
-            //                     return Err(Error::ClientAlreadyBlocked)
-            //                 }
-            //                 Action::Ack => (),
-            //                 _ => return Err(Error::InvalidMessageFormat),
-            //             }
-            //         }
-            //     }
-            //     Err(_) => {
-            //         println!("[COFFEE MACHINE {}]: timeout", id);
-            //         continue;
-            //     }
-            // };
+        send_message(&socket, message.clone(), addr, id)?;
+        // match socket.recv_from(&mut buf) {
+        //     Ok((size, _from)) => {
+        //         let message = String::from_utf8_lossy(&buf[..size]);
+        //         println!("[COFFEE MACHINE {}]: get {}", id, message);
+        //         if let Ok(received) = MessageParser::parse(message.into_owned()) {
+        //             match received {
+        //                 Action::NotEnoughPoints(_) => return Err(Error::NotEnoughPoints),
+        //                 Action::ClientAlreadyBlocked(_) => {
+        //                     return Err(Error::ClientAlreadyBlocked)
+        //                 }
+        //                 Action::Ack => (),
+        //                 _ => return Err(Error::InvalidMessageFormat),
+        //             }
+        //         }
+        //     }
+        //     Err(_) => {
+        //         println!("[COFFEE MACHINE {}]: timeout", id);
+        //         continue;
+        //     }
+        // };
         // }
 
         Ok(())
@@ -60,9 +60,7 @@ impl MessageSender {
                 if let Ok(received) = MessageParser::parse(message.into_owned()) {
                     match received {
                         Action::NotEnoughPoints(_) => return Err(Error::NotEnoughPoints),
-                        Action::ClientAlreadyBlocked(_) => {
-                            return Err(Error::ClientAlreadyBlocked)
-                        }
+                        Action::ClientAlreadyBlocked(_) => return Err(Error::ClientAlreadyBlocked),
                         Action::Ack => return Ok(()),
                         _ => return Err(Error::InvalidMessageFormat),
                     }
@@ -71,12 +69,10 @@ impl MessageSender {
             Err(_) => {
                 println!("[COFFEE MACHINE {}]: timeout", id);
                 return Err(Error::Timeout);
-                // continue;
             }
         };
         Ok(())
     }
-    
 }
 
 fn send_message(

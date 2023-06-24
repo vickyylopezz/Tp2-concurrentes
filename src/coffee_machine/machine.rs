@@ -19,7 +19,6 @@ pub struct Block {
     pub order: Order,
 }
 
-
 #[derive(Message)]
 #[rtype(result = "Result<(), Error>")]
 pub struct Complete {
@@ -87,17 +86,10 @@ impl Handler<Fail> for CoffeeMachine {
     }
 }
 
-
 impl CoffeeMachine {
     /// Handles messages to server.
     fn send_message(&mut self, message: String, id: u32) -> Result<(), Error> {
-        match MessageSender::send(
-            self.socket.clone(),
-            self.server_addr,
-            message,
-            None,
-            id,
-        ) {
+        match MessageSender::send(self.socket.clone(), self.server_addr, message, None, id) {
             Ok(_) => (),
             Err(err) => return Err(err),
         }
