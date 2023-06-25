@@ -16,7 +16,7 @@ impl MessageSender {
         message: String,
         id: u32,
     ) -> Result<(), Error> {
-        send_message(&socket, message.clone(), addr, id)?;
+        send_message(&socket, message, addr, id)?;
 
         Ok(())
     }

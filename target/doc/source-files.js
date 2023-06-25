@@ -3,6 +3,7 @@ var sourcesIndex = JSON.parse('{\
 "actix_derive":["",[],["lib.rs","message.rs","message_response.rs"]],\
 "actix_macros":["",[],["lib.rs"]],\
 "actix_rt":["",[],["arbiter.rs","lib.rs","runtime.rs","system.rs"]],\
+"async_recursion":["",[],["expand.rs","lib.rs","parse.rs"]],\
 "bitflags":["",[],["lib.rs"]],\
 "bytes":["",[["buf",[],["buf_impl.rs","buf_mut.rs","chain.rs","iter.rs","limit.rs","mod.rs","reader.rs","take.rs","uninit_slice.rs","vec_deque.rs","writer.rs"]],["fmt",[],["debug.rs","hex.rs","mod.rs"]]],["bytes.rs","bytes_mut.rs","lib.rs","loom.rs"]],\
 "cfg_if":["",[],["lib.rs"]],\

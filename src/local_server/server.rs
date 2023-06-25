@@ -236,9 +236,9 @@ impl Server {
                         return Ok(());
                     }
                 }
-                return Ok(());
+                Ok(())
             }
-            Err(_) => return Err(Error::Timeout),
+            Err(_) => Err(Error::Timeout),
         }
     }
 

@@ -1,5 +1,6 @@
 use actix::{Actor, Addr};
 use actix_rt::System;
+use async_recursion::async_recursion;
 use rand::Rng;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket},
@@ -70,6 +71,7 @@ fn set_attempts(attempts: Option<usize>) -> usize {
     attempts.unwrap_or(1)
 }
 
+#[async_recursion]
 async fn handle_block_message(
     socket: Arc<UdpSocket>,
     id: usize,
@@ -98,7 +100,8 @@ async fn handle_block_message(
                                 Some(attempts),
                                 coffee_machine.clone(),
                                 order.clone(),
-                            );
+                            )
+                            .await?;
                         }
                         Error::Timeout => continue,
                         _ => return Err(Error::InvalidMessage),
@@ -111,6 +114,7 @@ async fn handle_block_message(
     Err(Error::CantSendMessage)
 }
 
+#[async_recursion]
 async fn handle_complete_message(
     socket: Arc<UdpSocket>,
     id: usize,
@@ -139,7 +143,8 @@ async fn handle_complete_message(
                                 Some(attempts),
                                 coffee_machine.clone(),
                                 order.clone(),
-                            );
+                            )
+                            .await?;
                         }
                         Error::Timeout => continue,
                         _ => return Err(Error::InvalidMessage),
@@ -203,8 +208,8 @@ fn main() -> Result<(), Error> {
             let id = idx % coffee_machines.len();
             let coffee_machine = coffee_machines[id].clone();
 
-            if pay_with_points(order.clone()) {
-                if handle_block_message(
+            if pay_with_points(order.clone())
+                && handle_block_message(
                     socket.clone(),
                     id,
                     Some(attempts),
@@ -213,13 +218,12 @@ fn main() -> Result<(), Error> {
                 )
                 .await
                 .is_err()
-                {
-                    println!(
-                        "[COFFEE MACHINE {}]: cant process order {:?} since server down",
-                        id, order.id
-                    );
-                    continue;
-                }
+            {
+                println!(
+                    "[COFFEE MACHINE {}]: cant process order {:?} since server down",
+                    id, order.id
+                );
+                continue;
             }
 
             sleep(Duration::from_secs(3));
