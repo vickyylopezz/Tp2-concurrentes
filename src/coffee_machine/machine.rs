@@ -1,17 +1,10 @@
 use actix::prelude::*;
-use rand::Rng;
 use std::{
     net::{SocketAddr, UdpSocket},
     sync::Arc,
-    thread::sleep,
-    time::Duration,
 };
 
 use crate::{coffee_machine::orders::Order, errors::Error, message_sender::MessageSender};
-
-const POINTS: &str = "points";
-const COMPLETED: bool = true;
-const FAILED: bool = false;
 
 #[derive(Message)]
 #[rtype(result = "Result<(), Error>")]
@@ -50,7 +43,7 @@ impl Handler<Block> for CoffeeMachine {
         let coffee_machine = self.clone();
 
         let block_message = format!("block {} {}", msg.order.customer_id, self.shop_id);
-        self.send_message(block_message, coffee_machine.id);
+        self.send_message(block_message, coffee_machine.id)?;
         Ok(())
     }
 }
@@ -66,7 +59,7 @@ impl Handler<Complete> for CoffeeMachine {
             "complete {} {} {} {}",
             order.customer_id, order.price, order.payment_method, self.shop_id
         );
-        self.send_message(complete_message, coffee_machine.id);
+        self.send_message(complete_message, coffee_machine.id)?;
 
         Ok(())
     }
@@ -89,7 +82,7 @@ impl Handler<Fail> for CoffeeMachine {
 impl CoffeeMachine {
     /// Handles messages to server.
     fn send_message(&mut self, message: String, id: u32) -> Result<(), Error> {
-        match MessageSender::send(self.socket.clone(), self.server_addr, message, None, id) {
+        match MessageSender::send(self.socket.clone(), self.server_addr, message, id) {
             Ok(_) => (),
             Err(err) => return Err(err),
         }

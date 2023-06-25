@@ -14,37 +14,9 @@ impl MessageSender {
         socket: Arc<UdpSocket>,
         addr: SocketAddr,
         message: String,
-        attempts: Option<usize>,
         id: u32,
     ) -> Result<(), Error> {
-        let mut attempts = set_attempts(attempts);
-        // set_read_timeout(&socket, timeout)?;
-
-        // let mut buf = [0u8; 1024];
-        // while attempts > 0 {
-        //     attempts -= 1;
         send_message(&socket, message.clone(), addr, id)?;
-        // match socket.recv_from(&mut buf) {
-        //     Ok((size, _from)) => {
-        //         let message = String::from_utf8_lossy(&buf[..size]);
-        //         println!("[COFFEE MACHINE {}]: get {}", id, message);
-        //         if let Ok(received) = MessageParser::parse(message.into_owned()) {
-        //             match received {
-        //                 Action::NotEnoughPoints(_) => return Err(Error::NotEnoughPoints),
-        //                 Action::ClientAlreadyBlocked(_) => {
-        //                     return Err(Error::ClientAlreadyBlocked)
-        //                 }
-        //                 Action::Ack => (),
-        //                 _ => return Err(Error::InvalidMessageFormat),
-        //             }
-        //         }
-        //     }
-        //     Err(_) => {
-        //         println!("[COFFEE MACHINE {}]: timeout", id);
-        //         continue;
-        //     }
-        // };
-        // }
 
         Ok(())
     }
@@ -100,8 +72,4 @@ fn set_duration(timeout: Option<Duration>) -> Duration {
         None => Duration::from_secs(10),
         Some(d) => d,
     }
-}
-
-fn set_attempts(attempts: Option<usize>) -> usize {
-    attempts.unwrap_or(1)
 }
